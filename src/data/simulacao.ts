@@ -5,326 +5,297 @@ import type {
 
 
 // ======================================================
-// ATENÇÃO
+// SIMULAÇÃO ELEITORAL
 // ======================================================
 //
-// TODOS OS NÚMEROS DESTE ARQUIVO SÃO FICTÍCIOS.
+// TODOS OS DADOS DESTE ARQUIVO SÃO FICTÍCIOS.
 //
-// Eles existem exclusivamente para testar:
+// Finalidade exclusiva:
+// testar o funcionamento técnico do monitor.
 //
-// - cores do mapa;
-// - percentuais;
-// - votos;
-// - totalização;
-// - troca de liderança;
-// - painel estadual.
-//
-// NÃO são projeções eleitorais.
-// NÃO são pesquisas.
-// NÃO são resultados oficiais.
+// NÃO representam:
+// - pesquisa eleitoral;
+// - projeção;
+// - previsão;
+// - resultado oficial.
 // ======================================================
 
 
-// ======================================================
-// TIPO AUXILIAR
-// ======================================================
-
-interface ConfiguracaoSimulacao {
+interface ConfiguracaoEstado {
   uf: string;
   nome: string;
 
-  totalizado: number;
+  votosLulaFinal: number;
+  votosFlavioFinal: number;
 
-  votosLula: number;
-  votosFlavio: number;
+  comparecimentoFinal: number;
+  abstencoesFinal: number;
 
-  comparecimento: number;
-  abstencoes: number;
+  // Se true, o estado terá troca de liderança
+  // durante a simulação.
+  trocaLideranca?: boolean;
 }
 
 
 // ======================================================
-// CONFIGURAÇÃO DAS 27 UFs
+// CONFIGURAÇÃO FINAL FICTÍCIA
 // ======================================================
 
-const configuracaoSimulada:
-  ConfiguracaoSimulacao[] = [
+const estadosSimulados:
+  ConfiguracaoEstado[] = [
 
   {
     uf: "AC",
     nome: "Acre",
-    totalizado: 38.4,
-    votosLula: 118000,
-    votosFlavio: 171000,
-    comparecimento: 310000,
-    abstencoes: 72000,
+    votosLulaFinal: 118000,
+    votosFlavioFinal: 171000,
+    comparecimentoFinal: 310000,
+    abstencoesFinal: 72000,
   },
 
   {
     uf: "AL",
     nome: "Alagoas",
-    totalizado: 45.7,
-    votosLula: 610000,
-    votosFlavio: 342000,
-    comparecimento: 1020000,
-    abstencoes: 250000,
+    votosLulaFinal: 610000,
+    votosFlavioFinal: 342000,
+    comparecimentoFinal: 1020000,
+    abstencoesFinal: 250000,
   },
 
   {
     uf: "AP",
     nome: "Amapá",
-    totalizado: 31.8,
-    votosLula: 126000,
-    votosFlavio: 98000,
-    comparecimento: 241000,
-    abstencoes: 61000,
+    votosLulaFinal: 126000,
+    votosFlavioFinal: 98000,
+    comparecimentoFinal: 241000,
+    abstencoesFinal: 61000,
   },
 
   {
     uf: "AM",
     nome: "Amazonas",
-    totalizado: 42.6,
-    votosLula: 620000,
-    votosFlavio: 490000,
-    comparecimento: 1190000,
-    abstencoes: 310000,
+    votosLulaFinal: 620000,
+    votosFlavioFinal: 490000,
+    comparecimentoFinal: 1190000,
+    abstencoesFinal: 310000,
   },
 
   {
     uf: "BA",
     nome: "Bahia",
-    totalizado: 52.3,
-    votosLula: 2910000,
-    votosFlavio: 1160000,
-    comparecimento: 4310000,
-    abstencoes: 890000,
+    votosLulaFinal: 2910000,
+    votosFlavioFinal: 1160000,
+    comparecimentoFinal: 4310000,
+    abstencoesFinal: 890000,
   },
 
   {
     uf: "CE",
     nome: "Ceará",
-    totalizado: 48.9,
-    votosLula: 1730000,
-    votosFlavio: 780000,
-    comparecimento: 2660000,
-    abstencoes: 610000,
+    votosLulaFinal: 1730000,
+    votosFlavioFinal: 780000,
+    comparecimentoFinal: 2660000,
+    abstencoesFinal: 610000,
   },
 
   {
     uf: "DF",
     nome: "Distrito Federal",
-    totalizado: 64.2,
-    votosLula: 620000,
-    votosFlavio: 720000,
-    comparecimento: 1420000,
-    abstencoes: 310000,
+    votosLulaFinal: 620000,
+    votosFlavioFinal: 720000,
+    comparecimentoFinal: 1420000,
+    abstencoesFinal: 310000,
   },
 
   {
     uf: "ES",
     nome: "Espírito Santo",
-    totalizado: 55.4,
-    votosLula: 830000,
-    votosFlavio: 910000,
-    comparecimento: 1840000,
-    abstencoes: 390000,
+    votosLulaFinal: 830000,
+    votosFlavioFinal: 910000,
+    comparecimentoFinal: 1840000,
+    abstencoesFinal: 390000,
   },
 
   {
     uf: "GO",
     nome: "Goiás",
-    totalizado: 43.8,
-    votosLula: 1050000,
-    votosFlavio: 1320000,
-    comparecimento: 2500000,
-    abstencoes: 570000,
+    votosLulaFinal: 1050000,
+    votosFlavioFinal: 1320000,
+    comparecimentoFinal: 2500000,
+    abstencoesFinal: 570000,
   },
 
   {
     uf: "MA",
     nome: "Maranhão",
-    totalizado: 36.1,
-    votosLula: 1130000,
-    votosFlavio: 490000,
-    comparecimento: 1740000,
-    abstencoes: 430000,
+    votosLulaFinal: 1130000,
+    votosFlavioFinal: 490000,
+    comparecimentoFinal: 1740000,
+    abstencoesFinal: 430000,
   },
 
   {
     uf: "MT",
     nome: "Mato Grosso",
-    totalizado: 59.7,
-    votosLula: 580000,
-    votosFlavio: 790000,
-    comparecimento: 1450000,
-    abstencoes: 340000,
+    votosLulaFinal: 580000,
+    votosFlavioFinal: 790000,
+    comparecimentoFinal: 1450000,
+    abstencoesFinal: 340000,
   },
 
   {
     uf: "MS",
     nome: "Mato Grosso do Sul",
-    totalizado: 62.5,
-    votosLula: 530000,
-    votosFlavio: 610000,
-    comparecimento: 1210000,
-    abstencoes: 280000,
+    votosLulaFinal: 530000,
+    votosFlavioFinal: 610000,
+    comparecimentoFinal: 1210000,
+    abstencoesFinal: 280000,
   },
 
   {
     uf: "MG",
     nome: "Minas Gerais",
-    totalizado: 57.3,
-    votosLula: 4210000,
-    votosFlavio: 3970000,
-    comparecimento: 8610000,
-    abstencoes: 1720000,
+    votosLulaFinal: 4210000,
+    votosFlavioFinal: 3970000,
+    comparecimentoFinal: 8610000,
+    abstencoesFinal: 1720000,
+    trocaLideranca: true,
   },
 
   {
     uf: "PA",
     nome: "Pará",
-    totalizado: 39.5,
-    votosLula: 1410000,
-    votosFlavio: 860000,
-    comparecimento: 2410000,
-    abstencoes: 590000,
+    votosLulaFinal: 1410000,
+    votosFlavioFinal: 860000,
+    comparecimentoFinal: 2410000,
+    abstencoesFinal: 590000,
   },
 
   {
     uf: "PB",
     nome: "Paraíba",
-    totalizado: 46.8,
-    votosLula: 790000,
-    votosFlavio: 390000,
-    comparecimento: 1260000,
-    abstencoes: 300000,
+    votosLulaFinal: 790000,
+    votosFlavioFinal: 390000,
+    comparecimentoFinal: 1260000,
+    abstencoesFinal: 300000,
   },
 
   {
     uf: "PR",
     nome: "Paraná",
-    totalizado: 61.4,
-    votosLula: 2210000,
-    votosFlavio: 2670000,
-    comparecimento: 5120000,
-    abstencoes: 1030000,
+    votosLulaFinal: 2210000,
+    votosFlavioFinal: 2670000,
+    comparecimentoFinal: 5120000,
+    abstencoesFinal: 1030000,
   },
 
   {
     uf: "PE",
     nome: "Pernambuco",
-    totalizado: 58.7,
-    votosLula: 2050000,
-    votosFlavio: 1010000,
-    comparecimento: 3260000,
-    abstencoes: 720000,
+    votosLulaFinal: 2050000,
+    votosFlavioFinal: 1010000,
+    comparecimentoFinal: 3260000,
+    abstencoesFinal: 720000,
   },
 
   {
     uf: "PI",
     nome: "Piauí",
-    totalizado: 41.3,
-    votosLula: 660000,
-    votosFlavio: 250000,
-    comparecimento: 970000,
-    abstencoes: 220000,
+    votosLulaFinal: 660000,
+    votosFlavioFinal: 250000,
+    comparecimentoFinal: 970000,
+    abstencoesFinal: 220000,
   },
 
   {
     uf: "RJ",
     nome: "Rio de Janeiro",
-    totalizado: 66.9,
-    votosLula: 3180000,
-    votosFlavio: 3440000,
-    comparecimento: 6970000,
-    abstencoes: 1540000,
+    votosLulaFinal: 3180000,
+    votosFlavioFinal: 3440000,
+    comparecimentoFinal: 6970000,
+    abstencoesFinal: 1540000,
+    trocaLideranca: true,
   },
 
   {
     uf: "RN",
     nome: "Rio Grande do Norte",
-    totalizado: 49.2,
-    votosLula: 690000,
-    votosFlavio: 330000,
-    comparecimento: 1090000,
-    abstencoes: 260000,
+    votosLulaFinal: 690000,
+    votosFlavioFinal: 330000,
+    comparecimentoFinal: 1090000,
+    abstencoesFinal: 260000,
   },
 
   {
     uf: "RS",
     nome: "Rio Grande do Sul",
-    totalizado: 63.1,
-    votosLula: 2180000,
-    votosFlavio: 2450000,
-    comparecimento: 4890000,
-    abstencoes: 1050000,
+    votosLulaFinal: 2180000,
+    votosFlavioFinal: 2450000,
+    comparecimentoFinal: 4890000,
+    abstencoesFinal: 1050000,
   },
 
   {
     uf: "RO",
     nome: "Rondônia",
-    totalizado: 44.6,
-    votosLula: 290000,
-    votosFlavio: 410000,
-    comparecimento: 745000,
-    abstencoes: 175000,
+    votosLulaFinal: 290000,
+    votosFlavioFinal: 410000,
+    comparecimentoFinal: 745000,
+    abstencoesFinal: 175000,
   },
 
   {
     uf: "RR",
     nome: "Roraima",
-    totalizado: 35.9,
-    votosLula: 85000,
-    votosFlavio: 121000,
-    comparecimento: 220000,
-    abstencoes: 52000,
+    votosLulaFinal: 85000,
+    votosFlavioFinal: 121000,
+    comparecimentoFinal: 220000,
+    abstencoesFinal: 52000,
   },
 
   {
     uf: "SC",
     nome: "Santa Catarina",
-    totalizado: 68.4,
-    votosLula: 1410000,
-    votosFlavio: 2030000,
-    comparecimento: 3620000,
-    abstencoes: 770000,
+    votosLulaFinal: 1410000,
+    votosFlavioFinal: 2030000,
+    comparecimentoFinal: 3620000,
+    abstencoesFinal: 770000,
   },
 
   {
     uf: "SP",
     nome: "São Paulo",
-    totalizado: 72.6,
-    votosLula: 8240000,
-    votosFlavio: 8110000,
-    comparecimento: 17200000,
-    abstencoes: 3510000,
+    votosLulaFinal: 8240000,
+    votosFlavioFinal: 8110000,
+    comparecimentoFinal: 17200000,
+    abstencoesFinal: 3510000,
+    trocaLideranca: true,
   },
 
   {
     uf: "SE",
     nome: "Sergipe",
-    totalizado: 47.5,
-    votosLula: 430000,
-    votosFlavio: 260000,
-    comparecimento: 735000,
-    abstencoes: 170000,
+    votosLulaFinal: 430000,
+    votosFlavioFinal: 260000,
+    comparecimentoFinal: 735000,
+    abstencoesFinal: 170000,
   },
 
   {
     uf: "TO",
     nome: "Tocantins",
-    totalizado: 40.2,
-    votosLula: 270000,
-    votosFlavio: 290000,
-    comparecimento: 595000,
-    abstencoes: 140000,
+    votosLulaFinal: 270000,
+    votosFlavioFinal: 290000,
+    comparecimentoFinal: 595000,
+    abstencoesFinal: 140000,
+    trocaLideranca: true,
   },
 
 ];
 
 
 // ======================================================
-// CALCULAR PERCENTUAL
+// PERCENTUAL
 // ======================================================
 
 function calcularPercentual(
@@ -333,18 +304,14 @@ function calcularPercentual(
 ): number {
 
   if (total === 0) {
-
     return 0;
-
   }
-
 
   return (
     votos /
     total *
     100
   );
-
 }
 
 
@@ -362,20 +329,6 @@ function criarCandidatos(
     votosFlavio;
 
 
-  const percentualLula =
-    calcularPercentual(
-      votosLula,
-      votosValidos
-    );
-
-
-  const percentualFlavio =
-    calcularPercentual(
-      votosFlavio,
-      votosValidos
-    );
-
-
   return [
 
     {
@@ -391,9 +344,11 @@ function criarCandidatos(
         votosLula,
 
       percentual:
-        percentualLula,
+        calcularPercentual(
+          votosLula,
+          votosValidos
+        ),
     },
-
 
     {
       numero: "22",
@@ -408,34 +363,163 @@ function criarCandidatos(
         votosFlavio,
 
       percentual:
-        percentualFlavio,
+        calcularPercentual(
+          votosFlavio,
+          votosValidos
+        ),
     },
 
   ];
-
 }
 
 
 // ======================================================
-// GERAR RESULTADOS SIMULADOS
+// GERAR RESULTADOS PARA UM ESTÁGIO DA APURAÇÃO
+// ======================================================
+//
+// progresso deve variar entre:
+//
+// 0 e 100
+//
+// Exemplos:
+//
+// 5
+// 18
+// 37
+// 59
+// 76
+// 91
+// 100
+//
 // ======================================================
 
-export function gerarResultadosSimulados():
-  ResultadoEstado[] {
+export function gerarResultadosSimulados(
+  progresso: number
+): ResultadoEstado[] {
 
-  return configuracaoSimulada.map(
+  const progressoSeguro =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        progresso
+      )
+    );
+
+
+  const fator =
+    progressoSeguro /
+    100;
+
+
+  return estadosSimulados.map(
     (estado) => {
 
-      const candidatos =
-        criarCandidatos(
-          estado.votosLula,
-          estado.votosFlavio
+      // ================================================
+      // PARTICIPAÇÃO DOS CANDIDATOS
+      // ================================================
+
+      const totalFinal =
+        estado.votosLulaFinal +
+        estado.votosFlavioFinal;
+
+
+      const percentualFinalLula =
+        estado.votosLulaFinal /
+        totalFinal;
+
+
+      let participacaoLula =
+        percentualFinalLula;
+
+
+      // ================================================
+      // TROCA DE LIDERANÇA
+      // ================================================
+      //
+      // Em alguns estados fazemos a composição dos
+      // votos mudar durante a totalização.
+      //
+      // No início Lula recebe uma vantagem fictícia.
+      //
+      // Conforme a apuração avança, a participação
+      // converge para o resultado final configurado.
+      //
+      // Isso permite testar mudanças de cor no mapa.
+      // ================================================
+
+      if (
+        estado.trocaLideranca
+      ) {
+
+        const participacaoInicialLula =
+          percentualFinalLula >= 0.5
+            ? 0.46
+            : 0.54;
+
+
+        participacaoLula =
+          participacaoInicialLula +
+          (
+            percentualFinalLula -
+            participacaoInicialLula
+          ) *
+          fator;
+      }
+
+
+      const participacaoFlavio =
+        1 -
+        participacaoLula;
+
+
+      // ================================================
+      // VOTOS TOTALIZADOS ATÉ O MOMENTO
+      // ================================================
+
+      const votosValidosMomento =
+        Math.round(
+          totalFinal *
+          fator
+        );
+
+
+      const votosLula =
+        Math.round(
+          votosValidosMomento *
+          participacaoLula
+        );
+
+
+      const votosFlavio =
+        Math.max(
+          0,
+          votosValidosMomento -
+          votosLula
+        );
+
+
+      // ================================================
+      // COMPARECIMENTO
+      // ================================================
+
+      const comparecimento =
+        Math.round(
+          estado.comparecimentoFinal *
+          fator
+        );
+
+
+      const abstencoes =
+        Math.round(
+          estado.abstencoesFinal *
+          fator
         );
 
 
       const votosValidos =
-        estado.votosLula +
-        estado.votosFlavio;
+        votosLula +
+        votosFlavio;
 
 
       return {
@@ -447,29 +531,31 @@ export function gerarResultadosSimulados():
           estado.nome,
 
         totalizado:
-          estado.totalizado,
+          progressoSeguro,
 
-        candidatos,
+        candidatos:
+          criarCandidatos(
+            votosLula,
+            votosFlavio
+          ),
 
         votosValidos,
 
         votosBrancos:
           Math.round(
-            estado.comparecimento *
+            comparecimento *
             0.015
           ),
 
         votosNulos:
           Math.round(
-            estado.comparecimento *
+            comparecimento *
             0.025
           ),
 
-        comparecimento:
-          estado.comparecimento,
+        comparecimento,
 
-        abstencoes:
-          estado.abstencoes,
+        abstencoes,
 
         atualizadoEm:
           "SIMULAÇÃO",
@@ -478,17 +564,4 @@ export function gerarResultadosSimulados():
 
     }
   );
-
 }
-
-
-// ======================================================
-// RESULTADOS PRONTOS
-// ======================================================
-//
-// Também exportamos diretamente o array caso seja útil
-// em outras partes da aplicação.
-// ======================================================
-
-export const resultadosSimulados =
-  gerarResultadosSimulados();
