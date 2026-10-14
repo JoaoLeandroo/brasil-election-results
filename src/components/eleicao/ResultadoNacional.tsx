@@ -5,6 +5,8 @@ import {
   useState,
 } from "react";
 
+import Image from "next/image";
+
 import type {
   ResultadoBrasil,
 } from "@/types/eleicao";
@@ -36,6 +38,10 @@ export default function ResultadoNacional() {
     erroAtualizacao,
     setErroAtualizacao,
   ] = useState(false);
+
+  // ====================================================
+  // CONSULTA AUTOMÁTICA AO RESULTADO NACIONAL
+  // ====================================================
 
   useEffect(() => {
     let componenteAtivo = true;
@@ -160,6 +166,10 @@ export default function ResultadoNacional() {
     return null;
   }
 
+  // ====================================================
+  // CANDIDATOS
+  // ====================================================
+
   const lula =
     resultado.candidatos.find(
       (candidato) =>
@@ -182,6 +192,10 @@ export default function ResultadoNacional() {
     );
   }
 
+  // ====================================================
+  // CÁLCULOS
+  // ====================================================
+
   const diferencaVotos =
     Math.abs(
       lula.votos -
@@ -201,16 +215,20 @@ export default function ResultadoNacional() {
     resultado.totalizado > 0 ||
     resultado.votosValidos > 0;
 
+  // ====================================================
+  // RENDER
+  // ====================================================
+
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
       {/* ==================================================
-          TOPO
+          CABEÇALHO
       ================================================== */}
 
       <div className="px-6 pb-5 pt-6 sm:px-8 sm:pt-7">
-
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
               Brasil
@@ -242,9 +260,10 @@ export default function ResultadoNacional() {
               Atualização oficial do TSE
             </p>
           </div>
+
         </div>
 
-        {/* TOTALIZAÇÃO */}
+        {/* BARRA DE TOTALIZAÇÃO */}
 
         <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
@@ -260,16 +279,20 @@ export default function ResultadoNacional() {
       </div>
 
       {/* ==================================================
-          PLACAR
+          PLACAR PRINCIPAL
       ================================================== */}
 
       <div className="border-y border-slate-100 bg-slate-50/60 px-6 py-7 sm:px-8">
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-4 sm:gap-8">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3 sm:gap-8">
 
-          {/* LULA */}
+          {/* ==================================================
+              LULA
+          ================================================== */}
 
           <div>
+            {/* NÚMERO */}
+
             <div className="flex items-center gap-2">
               <span
                 className="h-3 w-3 rounded-full"
@@ -286,16 +309,45 @@ export default function ResultadoNacional() {
               </span>
             </div>
 
-            <h3 className="mt-3 text-base font-bold uppercase tracking-wide text-slate-800 sm:text-lg">
-              {lula.nomeUrna ??
-                lula.nome}
-            </h3>
+            {/* FOTO + NOME */}
 
-            <p className="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+            <div className="mt-4 flex items-center gap-3 sm:gap-4">
+
+              <div
+                className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-[3px] bg-white shadow-sm sm:h-14 sm:w-14"
+                style={{
+                  borderColor:
+                    obterCorCandidato(
+                      lula.numero
+                    ),
+                }}
+              >
+                <Image
+                  src="/candidatos/lula.webp"
+                  alt="Lula"
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+
+              <h3 className="text-base font-bold uppercase leading-tight tracking-wide text-slate-800 sm:text-lg">
+                {lula.nomeUrna ??
+                  lula.nome}
+              </h3>
+
+            </div>
+
+            {/* PERCENTUAL */}
+
+            <p className="mt-4 text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
               {formatarPercentual(
                 lula.percentual
               )}
             </p>
+
+            {/* VOTOS */}
 
             <p className="mt-2 text-xs text-slate-500 sm:text-sm">
               {formatarNumero(
@@ -305,7 +357,9 @@ export default function ResultadoNacional() {
             </p>
           </div>
 
-          {/* DIVISOR */}
+          {/* ==================================================
+              DIVISOR CENTRAL
+          ================================================== */}
 
           <div className="pb-5 text-center">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300">
@@ -313,9 +367,13 @@ export default function ResultadoNacional() {
             </span>
           </div>
 
-          {/* FLAVIO */}
+          {/* ==================================================
+              FLAVIO BOLSONARO
+          ================================================== */}
 
           <div className="text-right">
+            {/* NÚMERO */}
+
             <div className="flex items-center justify-end gap-2">
               <span className="text-sm font-bold text-slate-400">
                 {flavio.numero}
@@ -332,16 +390,45 @@ export default function ResultadoNacional() {
               />
             </div>
 
-            <h3 className="mt-3 text-base font-bold uppercase tracking-wide text-slate-800 sm:text-lg">
-              {flavio.nomeUrna ??
-                flavio.nome}
-            </h3>
+            {/* NOME + FOTO */}
 
-            <p className="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+            <div className="mt-4 flex items-center justify-end gap-3 sm:gap-4">
+
+              <h3 className="text-base font-bold uppercase leading-tight tracking-wide text-slate-800 sm:text-lg">
+                {flavio.nomeUrna ??
+                  flavio.nome}
+              </h3>
+
+              <div
+                className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-[3px] bg-white shadow-sm sm:h-14 sm:w-14"
+                style={{
+                  borderColor:
+                    obterCorCandidato(
+                      flavio.numero
+                    ),
+                }}
+              >
+                <Image
+                  src="/candidatos/flavio-bolsonaro.webp"
+                  alt="Flavio Bolsonaro"
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+
+            </div>
+
+            {/* PERCENTUAL */}
+
+            <p className="mt-4 text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
               {formatarPercentual(
                 flavio.percentual
               )}
             </p>
+
+            {/* VOTOS */}
 
             <p className="mt-2 text-xs text-slate-500 sm:text-sm">
               {formatarNumero(
@@ -359,6 +446,7 @@ export default function ResultadoNacional() {
 
         <div className="mt-8">
           <div className="flex h-3 overflow-hidden rounded-full bg-slate-200">
+
             {apuracaoIniciada && (
               <>
                 <div
@@ -368,6 +456,7 @@ export default function ResultadoNacional() {
                       lula.percentual,
                       100
                     )}%`,
+
                     backgroundColor:
                       obterCorCandidato(
                         lula.numero
@@ -382,6 +471,7 @@ export default function ResultadoNacional() {
                       flavio.percentual,
                       100
                     )}%`,
+
                     backgroundColor:
                       obterCorCandidato(
                         flavio.numero
@@ -390,6 +480,7 @@ export default function ResultadoNacional() {
                 />
               </>
             )}
+
           </div>
 
           {!apuracaoIniciada && (
@@ -407,6 +498,8 @@ export default function ResultadoNacional() {
 
       <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
 
+        {/* VOTOS VÁLIDOS */}
+
         <div className="px-6 py-5 sm:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Votos válidos
@@ -418,6 +511,8 @@ export default function ResultadoNacional() {
             )}
           </p>
         </div>
+
+        {/* DIFERENÇA */}
 
         <div className="px-6 py-5 sm:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -431,6 +526,8 @@ export default function ResultadoNacional() {
             votos
           </p>
         </div>
+
+        {/* LIDERANÇA */}
 
         <div className="px-6 py-5 sm:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -474,11 +571,14 @@ export default function ResultadoNacional() {
 
       </div>
 
-      {/* ERRO DE ATUALIZAÇÃO */}
+      {/* ==================================================
+          ERRO DE ATUALIZAÇÃO
+      ================================================== */}
 
       {erroAtualizacao && (
         <div className="border-t border-amber-200 bg-amber-50 px-6 py-3 text-xs text-amber-700 sm:px-8">
-          Não foi possível obter a atualização mais recente. Os últimos dados recebidos permanecem em exibição.
+          Não foi possível obter a atualização mais recente.
+          Os últimos dados recebidos permanecem em exibição.
         </div>
       )}
 
