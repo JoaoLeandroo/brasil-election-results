@@ -1,8 +1,13 @@
-import { TSECandidato, TSEObjeto } from "@/types/tse";
+import {
+  TSECandidato,
+  TSEObjeto,
+} from "@/types/tse";
+
+import { TSE_CONFIG } from "@/lib/tse-config";
 
 
 // ======================================================
-// CONVERTER NÚMERO DO TSE
+// CONVERTER NÚMERO
 // ======================================================
 
 export function converterNumero(
@@ -24,7 +29,7 @@ export function converterNumero(
 
 
 // ======================================================
-// CONVERTER PERCENTUAL DO TSE
+// CONVERTER PERCENTUAL
 // ======================================================
 
 export function converterPercentual(
@@ -90,4 +95,70 @@ export function encontrarCandidatos(
   }
 
   return encontrados;
+}
+
+
+// ======================================================
+// FORMATAR CÓDIGO DA ELEIÇÃO
+// ======================================================
+
+function formatarEleicao(): string {
+
+  return String(
+    TSE_CONFIG.eleicao
+  ).padStart(6, "0");
+
+}
+
+
+// ======================================================
+// URL RESULTADO BRASIL
+// ======================================================
+
+export function criarUrlBrasil(): string {
+
+  const eleicao =
+    formatarEleicao();
+
+  const cargo =
+    TSE_CONFIG.cargo.presidente;
+
+  return (
+    `${TSE_CONFIG.baseUrl}/` +
+    `${TSE_CONFIG.ambiente}/` +
+    `${TSE_CONFIG.ciclo}/` +
+    `${TSE_CONFIG.eleicao}/` +
+    `dados/br/` +
+    `br-c${cargo}-e${eleicao}-u.json`
+  );
+
+}
+
+
+// ======================================================
+// URL RESULTADO POR UF
+// ======================================================
+
+export function criarUrlEstado(
+  uf: string
+): string {
+
+  const ufFormatada =
+    uf.toLowerCase();
+
+  const eleicao =
+    formatarEleicao();
+
+  const cargo =
+    TSE_CONFIG.cargo.presidente;
+
+  return (
+    `${TSE_CONFIG.baseUrl}/` +
+    `${TSE_CONFIG.ambiente}/` +
+    `${TSE_CONFIG.ciclo}/` +
+    `${TSE_CONFIG.eleicao}/` +
+    `dados/${ufFormatada}/` +
+    `${ufFormatada}-c${cargo}-e${eleicao}-u.json`
+  );
+
 }

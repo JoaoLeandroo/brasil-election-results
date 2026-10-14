@@ -3,35 +3,41 @@ import { NextResponse } from "next/server";
 import {
   converterNumero,
   converterPercentual,
+  criarUrlBrasil,
   encontrarCandidatos,
 } from "@/lib/tse";
 
-import type { Candidato } from "@/types/eleicao";
+import type {
+  Candidato,
+  ResultadoBrasil,
+} from "@/types/eleicao";
+
+import type {
+  TSEEleitorado,
+  TSEObjeto,
+  TSESecoes,
+  TSEVotos,
+} from "@/types/tse";
 
 
 // ======================================================
-// TEMPORÁRIO
-//
-// Estamos usando o 1º turno apenas para validar
-// nossa nova arquitetura.
-//
-// Depois substituiremos pela eleição do 2º turno.
+// API — RESULTADO BRASIL
 // ======================================================
-
-const URL_TSE =
-  "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json";
-
 
 export async function GET() {
 
   try {
+
+    const url =
+      criarUrlBrasil();
+
 
     // ==================================================
     // CONSULTAR TSE
     // ==================================================
 
     const response = await fetch(
-      URL_TSE,
+      url,
       {
         cache: "no-store",
       }
@@ -47,25 +53,17 @@ export async function GET() {
     }
 
 
-    // ==================================================
-    // JSON ORIGINAL
-    // ==================================================
-
-    const dados: unknown =
-      await response.json();
+    const dados =
+      (await response.json()) as TSEObjeto;
 
 
     // ==================================================
-    // LOCALIZAR CANDIDATOS
+    // CANDIDATOS
     // ==================================================
 
     const candidatosTSE =
       encontrarCandidatos(dados);
 
-
-    // ==================================================
-    // TRANSFORMAR PARA NOSSO FORMATO
-    // ==================================================
 
     const candidatos: Candidato[] =
       candidatosTSE
@@ -73,8 +71,7 @@ export async function GET() {
         .filter(
           (candidato) =>
             candidato.n &&
-            candidato.nm &&
-            candidato.vap
+            candidato.nm
         )
 
         .map((candidato) => ({
@@ -107,34 +104,104 @@ export async function GET() {
 
 
     // ==================================================
-    // RETORNO DA NOSSA API
+    // SEÇÕES
     // ==================================================
 
-    return NextResponse.json({
+    const secoes =
+      dados.s as TSESecoes | undefined;
 
-      teste: true,
 
-      aviso:
-        "Usando temporariamente dados oficiais do 1º turno para validar a arquitetura.",
+    // ==================================================
+    // ELEITORADO
+    // ==================================================
+
+    const eleitorado =
+      dados.e as TSEEleitorado | undefined;
+
+
+    // ==================================================
+    // VOTOS
+    // ==================================================
+
+    const votos =
+      dados.v as TSEVotos | undefined;
+
+
+    // ==================================================
+    // DATA / HORA OFICIAL DO TSE
+    // ==================================================
+
+    const dataTSE =
+      typeof dados.dt === "string"
+        ? dados.dt
+        : "";
+
+    const horaTSE =
+      typeof dados.ht === "string"
+        ? dados.ht
+        : "";
+
+
+    // ==================================================
+    // RESULTADO NORMALIZADO
+    // ==================================================
+
+    const resultado: ResultadoBrasil = {
 
       cargo:
         "Presidente da República",
 
       turno:
-        1,
+        2,
+
+      totalizado:
+        converterPercentual(
+          secoes?.pst
+        ),
 
       candidatos,
 
+      votosValidos:
+        converterNumero(
+          votos?.vv
+        ),
+
+      votosBrancos:
+        converterNumero(
+          votos?.vb
+        ),
+
+      votosNulos:
+        converterNumero(
+          votos?.vn
+        ),
+
+      comparecimento:
+        converterNumero(
+          eleitorado?.c
+        ),
+
+      abstencoes:
+        converterNumero(
+          eleitorado?.a
+        ),
+
       atualizadoEm:
-        new Date().toISOString(),
+        dataTSE && horaTSE
+          ? `${dataTSE} ${horaTSE}`
+          : "",
 
-    });
+    };
 
+
+    return NextResponse.json(
+      resultado
+    );
 
   } catch (erro) {
 
     console.error(
-      "Erro ao consultar TSE:",
+      "Erro ao consultar resultado nacional:",
       erro
     );
 
@@ -142,7 +209,7 @@ export async function GET() {
     return NextResponse.json(
       {
         erro:
-          "Não foi possível consultar os resultados do TSE.",
+          "Não foi possível consultar os resultados nacionais.",
       },
       {
         status: 500,
