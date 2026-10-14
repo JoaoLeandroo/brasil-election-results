@@ -23,11 +23,9 @@ import type {
 
 
 // ======================================================
-// TEMPO DE CACHE
+// CONFIGURAÇÃO
 // ======================================================
 
-// Durante a apuração, cada resposta do TSE poderá
-// ser reutilizada por até 10 segundos.
 const TEMPO_CACHE = 10;
 
 
@@ -40,8 +38,7 @@ async function consultarEstado(
   nome: string
 ): Promise<ResultadoEstado> {
 
-  const url =
-    criarUrlEstado(uf);
+  const url = criarUrlEstado(uf);
 
 
   const response = await fetch(
@@ -57,7 +54,7 @@ async function consultarEstado(
   if (!response.ok) {
 
     throw new Error(
-      `${uf}: TSE retornou ${response.status}`
+      `${uf}: TSE retornou HTTP ${response.status}`
     );
 
   }
@@ -211,12 +208,16 @@ export async function GET() {
 
   try {
 
-    // As 27 consultas continuam acontecendo
-    // paralelamente, mas agora cada fetch pode
-    // aproveitar o cache de 10 segundos.
+    // ==================================================
+    // CONSULTAR AS 27 UFs
+    // ==================================================
+    //
+    // Promise.allSettled permite que uma consulta falhe
+    // sem derrubar todas as outras.
+    // ==================================================
 
-    const resultados =
-      await Promise.all(
+    const consultas =
+      await Promise.allSettled(
 
         estados.map(
           (estado) =>
@@ -229,6 +230,133 @@ export async function GET() {
       );
 
 
+    // ==================================================
+    // RESULTADOS QUE FUNCIONARAM
+    // ==================================================
+
+    const resultados:
+      ResultadoEstado[] = [];
+
+
+    // ==================================================
+    // UFs QUE FALHARAM
+    // ==================================================
+
+    const estadosComErro:
+      string[] = [];
+
+
+    // ==================================================
+    // ANALISAR CADA RESPOSTA
+    // ==================================================
+
+    consultas.forEach(
+      (consulta, indice) => {
+
+        const estado =
+          estados[indice];
+
+
+        if (
+          consulta.status ===
+          "fulfilled"
+        ) {
+
+          resultados.push(
+            consulta.value
+          );
+
+          return;
+
+        }
+
+
+        // A consulta desta UF falhou.
+
+        estadosComErro.push(
+          estado.uf
+        );
+
+
+        console.error(
+          `Erro ao consultar ${estado.uf}:`,
+          consulta.reason
+        );
+
+      }
+    );
+
+
+    // ==================================================
+    // ORDENAR NOVAMENTE
+    // ==================================================
+    //
+    // Mantém a mesma ordem definida em estados.ts.
+    // ==================================================
+
+const ordemEstados =
+  new Map<string, number>(
+    estados.map(
+      (estado, indice) => [
+        estado.uf,
+        indice,
+      ]
+    )
+  );
+
+
+resultados.sort(
+  (a, b) =>
+    (ordemEstados.get(a.uf) ?? 999) -
+    (ordemEstados.get(b.uf) ?? 999)
+);
+
+
+    // ==================================================
+    // NENHUMA UF RESPONDEU
+    // ==================================================
+    //
+    // Só consideramos a API completamente indisponível
+    // quando nenhuma das 27 consultas funcionou.
+    // ==================================================
+
+    if (
+      resultados.length === 0
+    ) {
+
+      return NextResponse.json(
+        {
+
+          erro:
+            "Nenhum resultado estadual pôde ser consultado.",
+
+          turno: 2,
+
+          totalEstados: 0,
+
+          totalEsperado: estados.length,
+
+          estadosComErro:
+            estados.map(
+              (estado) =>
+                estado.uf
+            ),
+
+          estados: [],
+
+        },
+        {
+          status: 503,
+        }
+      );
+
+    }
+
+
+    // ==================================================
+    // RESPOSTA
+    // ==================================================
+
     return NextResponse.json({
 
       turno: 2,
@@ -236,23 +364,41 @@ export async function GET() {
       totalEstados:
         resultados.length,
 
+      totalEsperado:
+        estados.length,
+
+      parcial:
+        estadosComErro.length > 0,
+
+      totalErros:
+        estadosComErro.length,
+
+      estadosComErro,
+
       estados:
         resultados,
 
     });
 
+
   } catch (erro) {
 
+    // ==================================================
+    // ERRO INESPERADO DA NOSSA PRÓPRIA API
+    // ==================================================
+
     console.error(
-      "Erro ao consultar estados:",
+      "Erro inesperado na API de estados:",
       erro
     );
 
 
     return NextResponse.json(
       {
+
         erro:
-          "Não foi possível consultar os resultados estaduais.",
+          "Ocorreu um erro inesperado ao processar os resultados estaduais.",
+
       },
       {
         status: 500,
