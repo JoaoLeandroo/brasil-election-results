@@ -23,6 +23,15 @@ import type {
 
 
 // ======================================================
+// TEMPO DE CACHE
+// ======================================================
+
+// Durante a apuração, cada resposta do TSE poderá
+// ser reutilizada por até 10 segundos.
+const TEMPO_CACHE = 10;
+
+
+// ======================================================
 // CONSULTAR UMA UF
 // ======================================================
 
@@ -38,7 +47,9 @@ async function consultarEstado(
   const response = await fetch(
     url,
     {
-      cache: "no-store",
+      next: {
+        revalidate: TEMPO_CACHE,
+      },
     }
   );
 
@@ -52,8 +63,8 @@ async function consultarEstado(
   }
 
 
-  const dados =
-    (await response.json()) as TSEObjeto;
+  const dados: TSEObjeto =
+    await response.json();
 
 
   // ====================================================
@@ -107,25 +118,42 @@ async function consultarEstado(
   // ====================================================
 
   const secoes =
-    dados.s as TSESecoes | undefined;
+    dados.s as
+      | TSESecoes
+      | undefined;
+
 
   const eleitorado =
-    dados.e as TSEEleitorado | undefined;
+    dados.e as
+      | TSEEleitorado
+      | undefined;
+
 
   const votos =
-    dados.v as TSEVotos | undefined;
+    dados.v as
+      | TSEVotos
+      | undefined;
 
+
+  // ====================================================
+  // DATA E HORA DO TSE
+  // ====================================================
 
   const dataTSE =
     typeof dados.dt === "string"
       ? dados.dt
       : "";
 
+
   const horaTSE =
     typeof dados.ht === "string"
       ? dados.ht
       : "";
 
+
+  // ====================================================
+  // RESULTADO NORMALIZADO
+  // ====================================================
 
   return {
 
@@ -183,8 +211,13 @@ export async function GET() {
 
   try {
 
+    // As 27 consultas continuam acontecendo
+    // paralelamente, mas agora cada fetch pode
+    // aproveitar o cache de 10 segundos.
+
     const resultados =
       await Promise.all(
+
         estados.map(
           (estado) =>
             consultarEstado(
@@ -192,6 +225,7 @@ export async function GET() {
               estado.nome
             )
         )
+
       );
 
 

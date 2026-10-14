@@ -21,6 +21,13 @@ import type {
 
 
 // ======================================================
+// TEMPO DE CACHE
+// ======================================================
+
+const TEMPO_CACHE = 10;
+
+
+// ======================================================
 // API — RESULTADO BRASIL
 // ======================================================
 
@@ -39,7 +46,9 @@ export async function GET() {
     const response = await fetch(
       url,
       {
-        cache: "no-store",
+        next: {
+          revalidate: TEMPO_CACHE,
+        },
       }
     );
 
@@ -53,8 +62,8 @@ export async function GET() {
     }
 
 
-    const dados =
-      (await response.json()) as TSEObjeto;
+    const dados: TSEObjeto =
+      await response.json();
 
 
     // ==================================================
@@ -104,37 +113,36 @@ export async function GET() {
 
 
     // ==================================================
-    // SEÇÕES
+    // DADOS GERAIS
     // ==================================================
 
     const secoes =
-      dados.s as TSESecoes | undefined;
+      dados.s as
+        | TSESecoes
+        | undefined;
 
-
-    // ==================================================
-    // ELEITORADO
-    // ==================================================
 
     const eleitorado =
-      dados.e as TSEEleitorado | undefined;
+      dados.e as
+        | TSEEleitorado
+        | undefined;
 
-
-    // ==================================================
-    // VOTOS
-    // ==================================================
 
     const votos =
-      dados.v as TSEVotos | undefined;
+      dados.v as
+        | TSEVotos
+        | undefined;
 
 
     // ==================================================
-    // DATA / HORA OFICIAL DO TSE
+    // DATA E HORA
     // ==================================================
 
     const dataTSE =
       typeof dados.dt === "string"
         ? dados.dt
         : "";
+
 
     const horaTSE =
       typeof dados.ht === "string"
@@ -143,7 +151,7 @@ export async function GET() {
 
 
     // ==================================================
-    // RESULTADO NORMALIZADO
+    // RESULTADO
     // ==================================================
 
     const resultado: ResultadoBrasil = {
