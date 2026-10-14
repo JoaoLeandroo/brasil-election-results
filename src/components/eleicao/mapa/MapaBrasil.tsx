@@ -13,23 +13,13 @@ import type {
   ResultadoEstado,
 } from "@/types/eleicao";
 
-import type {
-  ModoDados,
-} from "@/hooks/useResultadosEleicao";
-
 import {
   COR_NEUTRA,
   obterCorEstado,
 } from "@/lib/eleicao";
 
 import LegendaMapa from "./LegendaMapa";
-
 import PainelEstado from "./PainelEstado";
-
-
-// ======================================================
-// TIPOS DO GEOJSON
-// ======================================================
 
 interface PropriedadesUF {
   CD_UF: string;
@@ -43,13 +33,11 @@ interface PropriedadesUF {
   AREA_KM2?: number;
 }
 
-
 type EstadoGeoJSON =
   GeoJSON.Feature<
     GeoJSON.Geometry,
     PropriedadesUF
   >;
-
 
 type BrasilGeoJSON =
   GeoJSON.FeatureCollection<
@@ -57,56 +45,22 @@ type BrasilGeoJSON =
     PropriedadesUF
   >;
 
-
-// ======================================================
-// PROPS
-// ======================================================
-
 interface Props {
-  resultados:
-    ResultadoEstado[];
-
-  modoDados:
-    ModoDados;
-
-  carregando:
-    boolean;
+  resultados: ResultadoEstado[];
+  carregando: boolean;
 }
-
-
-// ======================================================
-// COMPONENTE
-// ======================================================
 
 export default function MapaBrasil({
   resultados,
-  modoDados,
   carregando,
 }: Props) {
-
-  // ====================================================
-  // SVG
-  // ====================================================
-
   const svgRef =
     useRef<SVGSVGElement | null>(
       null
     );
 
-
-  // ====================================================
-  // REF DA UF SELECIONADA
-  // ====================================================
-
   const estadoSelecionadoRef =
-    useRef<string | null>(
-      null
-    );
-
-
-  // ====================================================
-  // GEOJSON
-  // ====================================================
+    useRef<string | null>(null);
 
   const [
     geojson,
@@ -116,46 +70,23 @@ export default function MapaBrasil({
       null
     );
 
-
-  // ====================================================
-  // ERRO DO MAPA
-  // ====================================================
-
   const [
     erroMapa,
     setErroMapa,
   ] =
-    useState<string | null>(
-      null
-    );
-
-
-  // ====================================================
-  // UF SELECIONADA
-  // ====================================================
+    useState<string | null>(null);
 
   const [
     estadoSelecionado,
     setEstadoSelecionado,
   ] =
-    useState<string | null>(
-      null
-    );
-
-
-  // ====================================================
-  // RESULTADO DA UF SELECIONADA
-  // ====================================================
+    useState<string | null>(null);
 
   const resultadoSelecionado =
     useMemo(() => {
-
-      if (
-        !estadoSelecionado
-      ) {
+      if (!estadoSelecionado) {
         return null;
       }
-
 
       return (
         resultados.find(
@@ -164,162 +95,108 @@ export default function MapaBrasil({
             estadoSelecionado
         ) ?? null
       );
-
     }, [
       estadoSelecionado,
       resultados,
     ]);
 
-
   // ====================================================
-  // CARREGAR GEOJSON
+  // GEOJSON
   // ====================================================
 
   useEffect(() => {
-
-    let componenteAtivo =
-      true;
-
+    let componenteAtivo = true;
 
     async function carregarMapa() {
-
       try {
-
         const resposta =
           await fetch(
             "/geo/brasil-ufs-web.geojson"
           );
 
-
         if (!resposta.ok) {
-
           throw new Error(
             `GeoJSON retornou HTTP ${resposta.status}`
           );
-
         }
-
 
         const dados:
           BrasilGeoJSON =
             await resposta.json();
 
-
         if (!componenteAtivo) {
           return;
         }
 
-
-        setGeojson(
-          dados
-        );
-
-
-        setErroMapa(
-          null
-        );
-
-
+        setGeojson(dados);
+        setErroMapa(null);
       } catch (error) {
-
         console.error(
           "Erro ao carregar mapa:",
           error
         );
 
-
         if (!componenteAtivo) {
           return;
         }
 
-
         setErroMapa(
           "Não foi possível carregar o mapa do Brasil."
         );
-
       }
-
     }
-
 
     void carregarMapa();
 
-
     return () => {
-
-      componenteAtivo =
-        false;
-
+      componenteAtivo = false;
     };
-
   }, []);
-
 
   // ====================================================
   // DESENHAR GEOMETRIA
   // ====================================================
 
   useEffect(() => {
-
     if (!geojson) {
       return;
     }
 
-
     const elementoSvg =
       svgRef.current;
-
 
     if (!elementoSvg) {
       return;
     }
 
-
-    const largura =
-      800;
-
-    const altura =
-      760;
-
+    const largura = 800;
+    const altura = 760;
 
     const svg =
       d3.select(
         elementoSvg
       );
 
-
-    // Limpa desenho anterior.
-
     svg
       .selectAll("*")
       .remove();
-
 
     svg
       .attr(
         "viewBox",
         `0 0 ${largura} ${altura}`
       )
-
       .attr(
         "preserveAspectRatio",
         "xMidYMid meet"
       );
-
-
-    // ==================================================
-    // PROJEÇÃO
-    // ==================================================
 
     const projection =
       d3
         .geoMercator()
         .fitExtent(
           [
-            [
-              25,
-              25,
-            ],
+            [25, 25],
             [
               largura - 25,
               altura - 25,
@@ -328,18 +205,12 @@ export default function MapaBrasil({
           geojson
         );
 
-
     const path =
       d3
         .geoPath()
         .projection(
           projection
         );
-
-
-    // ==================================================
-    // ESTADOS
-    // ==================================================
 
     const grupoEstados =
       svg
@@ -349,138 +220,101 @@ export default function MapaBrasil({
           "camada-estados"
         );
 
-
     grupoEstados
       .selectAll<
         SVGPathElement,
         EstadoGeoJSON
       >("path")
-
       .data(
         geojson.features
       )
-
       .join("path")
-
       .attr(
         "class",
         "estado"
       )
-
       .attr(
         "data-uf",
         (estado) =>
           estado.properties
             .SIGLA_UF
       )
-
-      .attr(
-        "d",
-        path
-      )
-
+      .attr("d", path)
       .attr(
         "fill",
         COR_NEUTRA
       )
-
       .attr(
         "stroke",
         "#ffffff"
       )
-
       .attr(
         "stroke-width",
         1.4
       )
-
       .attr(
         "opacity",
         1
       )
-
       .style(
         "cursor",
         "pointer"
       )
 
-
-      // ================================================
-      // HOVER
-      // ================================================
-
       .on(
         "mouseenter",
         function () {
-
           d3
             .select(this)
-
             .attr(
               "opacity",
               0.78
             )
-
             .attr(
               "stroke",
               "#111827"
             )
-
             .attr(
               "stroke-width",
               2
             );
-
         }
       )
-
 
       .on(
         "mouseleave",
         function () {
-
           const elemento =
             d3.select(this);
-
 
           const uf =
             elemento.attr(
               "data-uf"
             );
 
-
           const selecionado =
             uf ===
             estadoSelecionadoRef.current;
-
 
           elemento
             .attr(
               "opacity",
               1
             )
-
             .attr(
               "stroke",
               selecionado
                 ? "#111827"
                 : "#ffffff"
             )
-
             .attr(
               "stroke-width",
               selecionado
                 ? 3
                 : 1.4
             );
-
         }
       )
-
-
-      // ================================================
-      // CLIQUE
-      // ================================================
 
       .on(
         "click",
@@ -488,15 +322,12 @@ export default function MapaBrasil({
           _event,
           estado
         ) {
-
           setEstadoSelecionado(
             estado.properties
               .SIGLA_UF
           );
-
         }
       );
-
 
     // ==================================================
     // SIGLAS
@@ -510,87 +341,62 @@ export default function MapaBrasil({
           "camada-siglas"
         );
 
-
     grupoSiglas
       .selectAll<
         SVGTextElement,
         EstadoGeoJSON
       >("text")
-
       .data(
         geojson.features
       )
-
       .join("text")
-
       .attr(
         "transform",
         (estado) => {
-
           const centro =
             path.centroid(
               estado
             );
 
-
-          return (
-            `translate(` +
-            `${centro[0]},` +
-            `${centro[1]}` +
-            `)`
-          );
-
+          return `translate(${centro[0]},${centro[1]})`;
         }
       )
-
       .attr(
         "text-anchor",
         "middle"
       )
-
       .attr(
         "dominant-baseline",
         "middle"
       )
-
       .attr(
         "font-size",
         "12px"
       )
-
       .attr(
         "font-weight",
         "600"
       )
-
       .attr(
         "fill",
         "#475569"
       )
-
       .style(
         "pointer-events",
         "none"
       )
-
       .text(
         (estado) =>
           estado.properties
             .SIGLA_UF
       );
-
-
-  }, [
-    geojson,
-  ]);
-
+  }, [geojson]);
 
   // ====================================================
-  // ATUALIZAR CORES
+  // CORES
   // ====================================================
 
   useEffect(() => {
-
     if (
       !svgRef.current ||
       !geojson
@@ -598,12 +404,10 @@ export default function MapaBrasil({
       return;
     }
 
-
     const svg =
       d3.select(
         svgRef.current
       );
-
 
     const resultadosPorUF =
       new Map<
@@ -611,18 +415,14 @@ export default function MapaBrasil({
         ResultadoEstado
       >();
 
-
     resultados.forEach(
       (resultado) => {
-
         resultadosPorUF.set(
           resultado.uf,
           resultado
         );
-
       }
     );
-
 
     svg
       .selectAll<
@@ -631,60 +431,44 @@ export default function MapaBrasil({
       >(
         ".camada-estados .estado"
       )
-
       .interrupt()
-
       .transition()
-
-      .duration(
-        500
-      )
-
+      .duration(500)
       .attr(
         "fill",
         (estado) => {
-
           const uf =
             estado.properties
               .SIGLA_UF;
-
 
           return obterCorEstado(
             resultadosPorUF.get(
               uf
             )
           );
-
         }
       );
-
-
   }, [
     resultados,
     geojson,
   ]);
 
-
   // ====================================================
-  // DESTAQUE DA UF SELECIONADA
+  // SELEÇÃO
   // ====================================================
 
   useEffect(() => {
-
     estadoSelecionadoRef.current =
       estadoSelecionado;
-
 
     if (!svgRef.current) {
       return;
     }
 
-
     const svg =
       d3.select(
         svgRef.current
       );
-
 
     svg
       .selectAll<
@@ -693,7 +477,6 @@ export default function MapaBrasil({
       >(
         ".camada-estados .estado"
       )
-
       .attr(
         "stroke",
         (estado) =>
@@ -703,7 +486,6 @@ export default function MapaBrasil({
             ? "#111827"
             : "#ffffff"
       )
-
       .attr(
         "stroke-width",
         (estado) =>
@@ -713,16 +495,9 @@ export default function MapaBrasil({
             ? 3
             : 1.4
       );
-
-
   }, [
     estadoSelecionado,
   ]);
-
-
-  // ====================================================
-  // ERRO
-  // ====================================================
 
   if (erroMapa) {
     return (
@@ -732,16 +507,9 @@ export default function MapaBrasil({
     );
   }
 
-
-  // ====================================================
-  // INTERFACE
-  // ====================================================
-
   return (
     <section>
-
       <div className="mb-6">
-
         <h2 className="text-xl font-bold text-gray-900">
           Resultado por estado
         </h2>
@@ -749,17 +517,13 @@ export default function MapaBrasil({
         <p className="mt-1 text-sm text-gray-500">
           Clique em uma unidade da Federação para visualizar os resultados.
         </p>
-
       </div>
 
-
       <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-
 
         {/* MAPA */}
 
         <div>
-
           <svg
             ref={svgRef}
             className="h-auto w-full"
@@ -767,18 +531,13 @@ export default function MapaBrasil({
           />
 
           <LegendaMapa />
-
         </div>
 
-
-        {/* PAINEL */}
+        {/* ESTADO */}
 
         <PainelEstado
           resultado={
             resultadoSelecionado
-          }
-          modoDados={
-            modoDados
           }
           carregando={
             carregando
@@ -786,7 +545,6 @@ export default function MapaBrasil({
         />
 
       </div>
-
     </section>
   );
 }

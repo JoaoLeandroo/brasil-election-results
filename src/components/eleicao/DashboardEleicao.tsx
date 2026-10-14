@@ -1,7 +1,5 @@
 "use client";
 
-import ControleDados from "@/components/eleicao/ControleDados";
-
 import StatusAtualizacao from "@/components/eleicao/StatusAtualizacao";
 
 import ResultadoNacional from "@/components/eleicao/ResultadoNacional";
@@ -10,18 +8,9 @@ import MapaBrasil from "@/components/eleicao/mapa/MapaBrasil";
 
 import useResultadosEleicao from "@/hooks/useResultadosEleicao";
 
-
 export default function DashboardEleicao() {
-
   const {
-    modoDados,
-
-    ativarOficial,
-    ativarSimulacao,
-
-    resultadosExibidos,
-
-    progressoSimulacao,
+    resultados,
 
     carregando,
     atualizando,
@@ -39,75 +28,13 @@ export default function DashboardEleicao() {
   } =
     useResultadosEleicao();
 
-
   return (
-
     <div className="space-y-6">
 
-
-      {/* ================================================
-          CONTROLE OFICIAL / SIMULAÇÃO
-      ================================================= */}
-
-      <ControleDados
-        modoDados={
-          modoDados
-        }
-        onOficial={
-          ativarOficial
-        }
-        onSimulacao={
-          ativarSimulacao
-        }
-      />
-
-
-      {/* ================================================
-          ERRO DA CONSULTA ESTADUAL
-      ================================================= */}
-
-      {erroInicial &&
-        modoDados ===
-          "oficial" && (
-
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
-
-          <p className="font-semibold text-red-700">
-
-            Não foi possível carregar os dados estaduais
-
-          </p>
-
-          <p className="mt-1 text-sm text-red-600">
-
-            {erroInicial}
-
-          </p>
-
-          <p className="mt-2 text-xs text-red-500">
-
-            O modo de simulação continua disponível para testes da interface.
-
-          </p>
-
-        </div>
-
-      )}
-
-
-      {/* ================================================
-          STATUS GERAL
-      ================================================= */}
+      {/* STATUS */}
 
       <div className="flex justify-end">
-
         <StatusAtualizacao
-          modoDados={
-            modoDados
-          }
-          progressoSimulacao={
-            progressoSimulacao
-          }
           carregando={
             carregando
           }
@@ -133,48 +60,43 @@ export default function DashboardEleicao() {
             ultimaAtualizacao
           }
         />
-
       </div>
 
+      {/* ERRO ESTADUAL */}
 
-      {/* ================================================
-          RESULTADO NACIONAL
-      ================================================= */}
+      {erroInicial && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+          <p className="font-semibold text-red-700">
+            Não foi possível carregar os resultados estaduais
+          </p>
 
-      <ResultadoNacional
-        modoDados={
-          modoDados
-        }
-        resultadosEstados={
-          resultadosExibidos
-        }
-        progressoSimulacao={
-          progressoSimulacao
-        }
-      />
+          <p className="mt-1 text-sm text-red-600">
+            {erroInicial}
+          </p>
 
+          <p className="mt-2 text-xs text-red-500">
+            Novas tentativas de atualização serão realizadas automaticamente.
+          </p>
+        </div>
+      )}
 
-      {/* ================================================
-          MAPA DO BRASIL
-      ================================================= */}
+      {/* RESULTADO NACIONAL */}
+
+      <ResultadoNacional />
+
+      {/* MAPA */}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6">
-
         <MapaBrasil
           resultados={
-            resultadosExibidos
-          }
-          modoDados={
-            modoDados
+            resultados
           }
           carregando={
             carregando
           }
         />
-
       </div>
 
     </div>
-
   );
 }

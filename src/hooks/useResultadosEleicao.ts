@@ -2,27 +2,12 @@
 
 import {
   useEffect,
-  useMemo,
   useState,
 } from "react";
-
-import {
-  gerarResultadosSimulados,
-} from "@/data/simulacao";
 
 import type {
   ResultadoEstado,
 } from "@/types/eleicao";
-
-
-// ======================================================
-// TIPOS
-// ======================================================
-
-export type ModoDados =
-  | "oficial"
-  | "simulacao";
-
 
 interface RespostaEstados {
   turno: number;
@@ -34,196 +19,70 @@ interface RespostaEstados {
   estados: ResultadoEstado[];
 }
 
-
-// ======================================================
-// CONFIGURAÇÕES
-// ======================================================
-
-const INTERVALO_ATUALIZACAO =
-  10_000;
-
-const INTERVALO_SIMULACAO =
-  3_000;
-
-
-export const ETAPAS_SIMULACAO = [
-  5,
-  18,
-  37,
-  59,
-  76,
-  91,
-  100,
-];
-
-
-// ======================================================
-// HOOK
-// ======================================================
+const INTERVALO_ATUALIZACAO = 10_000;
 
 export default function useResultadosEleicao() {
-
-  // ====================================================
-  // MODO
-  // ====================================================
-
   const [
-    modoDados,
-    setModoDados,
-  ] =
-    useState<ModoDados>(
-      "oficial"
-    );
-
-
-  // ====================================================
-  // RESULTADOS OFICIAIS
-  // ====================================================
-
-  const [
-    resultadosOficiais,
-    setResultadosOficiais,
-  ] =
-    useState<ResultadoEstado[]>(
-      []
-    );
-
-
-  // ====================================================
-  // SIMULAÇÃO
-  // ====================================================
-
-  const [
-    progressoSimulacao,
-    setProgressoSimulacao,
-  ] =
-    useState(
-      ETAPAS_SIMULACAO[0]
-    );
-
-
-  // ====================================================
-  // STATUS
-  // ====================================================
+    resultados,
+    setResultados,
+  ] = useState<ResultadoEstado[]>([]);
 
   const [
     carregando,
     setCarregando,
-  ] =
-    useState(true);
+  ] = useState(true);
 
   const [
     atualizando,
     setAtualizando,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     erroInicial,
     setErroInicial,
-  ] =
-    useState<string | null>(
-      null
-    );
+  ] = useState<string | null>(null);
 
   const [
     erroAtualizacao,
     setErroAtualizacao,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     dadosParciais,
     setDadosParciais,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     estadosComErro,
     setEstadosComErro,
-  ] =
-    useState<string[]>([]);
+  ] = useState<string[]>([]);
 
   const [
     totalEstados,
     setTotalEstados,
-  ] =
-    useState(0);
+  ] = useState(0);
 
   const [
     totalEsperado,
     setTotalEsperado,
-  ] =
-    useState(27);
+  ] = useState(27);
 
   const [
     ultimaAtualizacao,
     setUltimaAtualizacao,
-  ] =
-    useState<Date | null>(
-      null
-    );
-
-
-  // ====================================================
-  // RESULTADOS SIMULADOS
-  // ====================================================
-
-  const resultadosSimulados =
-    useMemo(() => {
-      return gerarResultadosSimulados(
-        progressoSimulacao
-      );
-    }, [
-      progressoSimulacao,
-    ]);
-
-
-  // ====================================================
-  // RESULTADOS ATUALMENTE EXIBIDOS
-  // ====================================================
-
-  const resultadosExibidos =
-    useMemo(() => {
-      if (
-        modoDados ===
-        "simulacao"
-      ) {
-        return resultadosSimulados;
-      }
-
-      return resultadosOficiais;
-    }, [
-      modoDados,
-      resultadosSimulados,
-      resultadosOficiais,
-    ]);
-
-
-  // ====================================================
-  // CONSULTA OFICIAL
-  // ====================================================
+  ] = useState<Date | null>(null);
 
   useEffect(() => {
-    let componenteAtivo =
-      true;
-
-    let primeiraConsulta =
-      true;
-
-    let consultaEmAndamento =
-      false;
-
+    let componenteAtivo = true;
+    let primeiraConsulta = true;
+    let consultaEmAndamento = false;
 
     async function consultarResultados() {
-      if (
-        consultaEmAndamento
-      ) {
+      if (consultaEmAndamento) {
         return;
       }
 
-      consultaEmAndamento =
-        true;
+      consultaEmAndamento = true;
 
       try {
         if (
@@ -233,15 +92,12 @@ export default function useResultadosEleicao() {
           setAtualizando(true);
         }
 
-
-        const resposta =
-          await fetch(
-            "/api/resultados/estados",
-            {
-              cache: "no-store",
-            }
-          );
-
+        const resposta = await fetch(
+          "/api/resultados/estados",
+          {
+            cache: "no-store",
+          }
+        );
 
         if (!resposta.ok) {
           throw new Error(
@@ -249,20 +105,14 @@ export default function useResultadosEleicao() {
           );
         }
 
-
-        const dados:
-          RespostaEstados =
-            await resposta.json();
-
+        const dados: RespostaEstados =
+          await resposta.json();
 
         if (!componenteAtivo) {
           return;
         }
 
-
-        setResultadosOficiais(
-          dados.estados
-        );
+        setResultados(dados.estados);
 
         setDadosParciais(
           dados.parcial
@@ -284,52 +134,34 @@ export default function useResultadosEleicao() {
           new Date()
         );
 
-        setErroAtualizacao(
-          false
-        );
-
-        setErroInicial(
-          null
-        );
+        setErroInicial(null);
+        setErroAtualizacao(false);
       } catch (error) {
         console.error(
-          "Erro ao consultar resultados:",
+          "Erro ao consultar resultados estaduais:",
           error
         );
-
 
         if (!componenteAtivo) {
           return;
         }
 
-
-        if (
-          primeiraConsulta
-        ) {
+        if (primeiraConsulta) {
           setErroInicial(
             "Não foi possível carregar os resultados eleitorais."
           );
         } else {
-          setErroAtualizacao(
-            true
-          );
+          setErroAtualizacao(true);
         }
       } finally {
-        consultaEmAndamento =
-          false;
-
+        consultaEmAndamento = false;
 
         if (!componenteAtivo) {
           return;
         }
 
-
-        if (
-          primeiraConsulta
-        ) {
-          primeiraConsulta =
-            false;
-
+        if (primeiraConsulta) {
+          primeiraConsulta = false;
           setCarregando(false);
         }
 
@@ -337,9 +169,7 @@ export default function useResultadosEleicao() {
       }
     }
 
-
     void consultarResultados();
-
 
     const intervalo =
       window.setInterval(
@@ -349,10 +179,8 @@ export default function useResultadosEleicao() {
         INTERVALO_ATUALIZACAO
       );
 
-
     return () => {
-      componenteAtivo =
-        false;
+      componenteAtivo = false;
 
       window.clearInterval(
         intervalo
@@ -360,101 +188,8 @@ export default function useResultadosEleicao() {
     };
   }, []);
 
-
-  // ====================================================
-  // SIMULAÇÃO AUTOMÁTICA
-  // ====================================================
-
-  useEffect(() => {
-    if (
-      modoDados !==
-      "simulacao"
-    ) {
-      return;
-    }
-
-
-    const indiceAtual =
-      ETAPAS_SIMULACAO.indexOf(
-        progressoSimulacao
-      );
-
-
-    if (
-      indiceAtual === -1 ||
-      indiceAtual >=
-        ETAPAS_SIMULACAO.length -
-          1
-    ) {
-      return;
-    }
-
-
-    const temporizador =
-      window.setTimeout(
-        () => {
-          setProgressoSimulacao(
-            ETAPAS_SIMULACAO[
-              indiceAtual + 1
-            ]
-          );
-        },
-        INTERVALO_SIMULACAO
-      );
-
-
-    return () => {
-      window.clearTimeout(
-        temporizador
-      );
-    };
-  }, [
-    modoDados,
-    progressoSimulacao,
-  ]);
-
-
-  // ====================================================
-  // ATIVAR SIMULAÇÃO
-  // ====================================================
-
-  function ativarSimulacao() {
-    setProgressoSimulacao(
-      ETAPAS_SIMULACAO[0]
-    );
-
-    setModoDados(
-      "simulacao"
-    );
-  }
-
-
-  // ====================================================
-  // ATIVAR OFICIAL
-  // ====================================================
-
-  function ativarOficial() {
-    setModoDados(
-      "oficial"
-    );
-  }
-
-
-  // ====================================================
-  // RETORNO
-  // ====================================================
-
   return {
-    modoDados,
-
-    ativarOficial,
-    ativarSimulacao,
-
-    resultadosOficiais,
-    resultadosSimulados,
-    resultadosExibidos,
-
-    progressoSimulacao,
+    resultados,
 
     carregando,
     atualizando,
