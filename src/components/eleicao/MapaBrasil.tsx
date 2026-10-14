@@ -9,13 +9,17 @@ import {
 
 import * as d3 from "d3";
 
+import {
+  resultadosSimulados,
+} from "@/data/simulacao";
+
 import type {
   ResultadoEstado,
 } from "@/types/eleicao";
 
 
 // ======================================================
-// TIPOS DO GEOJSON
+// TIPOS
 // ======================================================
 
 interface PropriedadesUF {
@@ -28,24 +32,17 @@ interface PropriedadesUF {
   AREA_KM2?: number;
 }
 
-
 type EstadoGeoJSON =
   GeoJSON.Feature<
     GeoJSON.Geometry,
     PropriedadesUF
   >;
 
-
 type BrasilGeoJSON =
   GeoJSON.FeatureCollection<
     GeoJSON.Geometry,
     PropriedadesUF
   >;
-
-
-// ======================================================
-// RESPOSTA DA API
-// ======================================================
 
 interface RespostaEstados {
   turno: number;
@@ -57,6 +54,10 @@ interface RespostaEstados {
   estados: ResultadoEstado[];
 }
 
+type ModoDados =
+  | "oficial"
+  | "simulacao";
+
 
 // ======================================================
 // CONFIGURAÇÃO
@@ -65,27 +66,18 @@ interface RespostaEstados {
 const INTERVALO_ATUALIZACAO =
   10_000;
 
-
-// ======================================================
-// CORES
-// ======================================================
-
 const COR_NEUTRA =
   "#e5e7eb";
 
-
 const CORES_CANDIDATOS:
   Record<string, string> = {
-
     "13": "#ef4444",
-
     "22": "#3b82f6",
-
   };
 
 
 // ======================================================
-// DESCOBRIR COR ELEITORAL DA UF
+// COR ELEITORAL
 // ======================================================
 
 function obterCorEstado(
@@ -95,22 +87,14 @@ function obterCorEstado(
 ): string {
 
   if (!resultado) {
-
     return COR_NEUTRA;
-
   }
-
-
-  // Nenhuma apuração ainda.
 
   if (
     resultado.totalizado === 0
   ) {
-
     return COR_NEUTRA;
-
   }
-
 
   const candidatos =
     [...resultado.candidatos]
@@ -119,34 +103,24 @@ function obterCorEstado(
           b.votos - a.votos
       );
 
-
   if (
     candidatos.length < 2
   ) {
-
     return COR_NEUTRA;
-
   }
-
-
-  // Empate.
 
   if (
     candidatos[0].votos ===
     candidatos[1].votos
   ) {
-
     return COR_NEUTRA;
-
   }
-
 
   return (
     CORES_CANDIDATOS[
       candidatos[0].numero
     ] ?? COR_NEUTRA
   );
-
 }
 
 
@@ -156,25 +130,10 @@ function obterCorEstado(
 
 export default function MapaBrasil() {
 
-  // ====================================================
-  // SVG
-  // ====================================================
-
   const svgRef =
     useRef<SVGSVGElement | null>(
       null
     );
-
-
-  // ====================================================
-  // REF DA UF SELECIONADA
-  // ====================================================
-  //
-  // O D3 utiliza este ref nos eventos de mouse.
-  //
-  // Assim não precisamos redesenhar o mapa quando
-  // estadoSelecionado mudar.
-  // ====================================================
 
   const estadoSelecionadoRef =
     useRef<string | null>(
@@ -196,12 +155,12 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // RESULTADOS
+  // RESULTADOS OFICIAIS
   // ====================================================
 
   const [
-    resultados,
-    setResultados,
+    resultadosOficiais,
+    setResultadosOficiais,
   ] =
     useState<ResultadoEstado[]>(
       []
@@ -209,7 +168,20 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // UF SELECIONADA
+  // MODO DE EXIBIÇÃO
+  // ====================================================
+
+  const [
+    modoDados,
+    setModoDados,
+  ] =
+    useState<ModoDados>(
+      "oficial"
+    );
+
+
+  // ====================================================
+  // ESTADO SELECIONADO
   // ====================================================
 
   const [
@@ -222,7 +194,7 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // CARREGAMENTO INICIAL
+  // STATUS
   // ====================================================
 
   const [
@@ -231,21 +203,11 @@ export default function MapaBrasil() {
   ] =
     useState(true);
 
-
-  // ====================================================
-  // STATUS DE ATUALIZAÇÃO
-  // ====================================================
-
   const [
     atualizando,
     setAtualizando,
   ] =
     useState(false);
-
-
-  // ====================================================
-  // ERRO INICIAL
-  // ====================================================
 
   const [
     erroInicial,
@@ -255,32 +217,17 @@ export default function MapaBrasil() {
       null
     );
 
-
-  // ====================================================
-  // ERRO DE ATUALIZAÇÃO
-  // ====================================================
-
   const [
     erroAtualizacao,
     setErroAtualizacao,
   ] =
     useState(false);
 
-
-  // ====================================================
-  // DADOS PARCIAIS
-  // ====================================================
-
   const [
     dadosParciais,
     setDadosParciais,
   ] =
     useState(false);
-
-
-  // ====================================================
-  // UFs COM ERRO
-  // ====================================================
 
   const [
     estadosComErro,
@@ -290,32 +237,17 @@ export default function MapaBrasil() {
       []
     );
 
-
-  // ====================================================
-  // TOTAL DE ESTADOS RECEBIDOS
-  // ====================================================
-
   const [
     totalEstados,
     setTotalEstados,
   ] =
     useState(0);
 
-
-  // ====================================================
-  // TOTAL ESPERADO
-  // ====================================================
-
   const [
     totalEsperado,
     setTotalEsperado,
   ] =
     useState(27);
-
-
-  // ====================================================
-  // ÚLTIMA ATUALIZAÇÃO
-  // ====================================================
 
   const [
     ultimaAtualizacao,
@@ -327,17 +259,43 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // CARREGAR GEOJSON
+  // RESULTADOS QUE SERÃO EXIBIDOS
   // ====================================================
   //
-  // O GeoJSON é baixado apenas uma vez.
+  // Esta é a chave da simulação.
+  //
+  // Não substituímos os dados oficiais.
+  //
+  // Apenas decidimos qual conjunto será entregue
+  // para o mapa e para o painel.
+  // ====================================================
+
+  const resultadosExibidos =
+    useMemo(() => {
+
+      if (
+        modoDados ===
+        "simulacao"
+      ) {
+        return resultadosSimulados;
+      }
+
+      return resultadosOficiais;
+
+    }, [
+      modoDados,
+      resultadosOficiais,
+    ]);
+
+
+  // ====================================================
+  // CARREGAR GEOJSON
   // ====================================================
 
   useEffect(() => {
 
     let componenteAtivo =
       true;
-
 
     async function carregarMapa() {
 
@@ -348,7 +306,6 @@ export default function MapaBrasil() {
             "/geo/brasil-ufs-web.geojson"
           );
 
-
         if (!resposta.ok) {
 
           throw new Error(
@@ -357,23 +314,17 @@ export default function MapaBrasil() {
 
         }
 
-
         const dados:
           BrasilGeoJSON =
             await resposta.json();
 
-
         if (!componenteAtivo) {
-
           return;
-
         }
-
 
         setGeojson(
           dados
         );
-
 
       } catch (error) {
 
@@ -382,30 +333,21 @@ export default function MapaBrasil() {
           error
         );
 
-
         if (!componenteAtivo) {
-
           return;
-
         }
-
 
         setErroInicial(
           "Não foi possível carregar o mapa."
         );
 
-
         setCarregando(
           false
         );
-
       }
-
     }
 
-
     void carregarMapa();
-
 
     return () => {
 
@@ -418,15 +360,15 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // RESULTADOS + ATUALIZAÇÃO AUTOMÁTICA
+  // RESULTADOS OFICIAIS
   // ====================================================
   //
-  // Consulta:
+  // A API continua sendo consultada normalmente.
   //
-  // - imediatamente ao abrir;
-  // - novamente a cada 10 segundos.
+  // Mesmo que você esteja olhando a simulação,
+  // os dados oficiais continuam atualizados em memória.
   //
-  // O GeoJSON NÃO é carregado novamente.
+  // Assim, ao voltar para "Oficial", a troca é imediata.
   // ====================================================
 
   useEffect(() => {
@@ -434,10 +376,8 @@ export default function MapaBrasil() {
     let componenteAtivo =
       true;
 
-
     let primeiraConsulta =
       true;
-
 
     let consultaEmAndamento =
       false;
@@ -445,35 +385,24 @@ export default function MapaBrasil() {
 
     async function consultarResultados() {
 
-      // Impede duas consultas simultâneas.
-
       if (
         consultaEmAndamento
       ) {
-
         return;
-
       }
-
 
       consultaEmAndamento =
         true;
 
-
       try {
-
-        // Nas consultas seguintes mostramos
-        // "Atualizando resultados...".
 
         if (
           !primeiraConsulta &&
           componenteAtivo
         ) {
-
           setAtualizando(
             true
           );
-
         }
 
 
@@ -501,67 +430,41 @@ export default function MapaBrasil() {
 
 
         if (!componenteAtivo) {
-
           return;
-
         }
 
 
-        // ==============================================
-        // RESULTADOS
-        // ==============================================
-
-        setResultados(
+        setResultadosOficiais(
           dados.estados
         );
-
-
-        // ==============================================
-        // STATUS DA API
-        // ==============================================
 
         setDadosParciais(
           dados.parcial
         );
 
-
         setEstadosComErro(
           dados.estadosComErro
         );
-
 
         setTotalEstados(
           dados.totalEstados
         );
 
-
         setTotalEsperado(
           dados.totalEsperado
         );
-
-
-        // ==============================================
-        // HORÁRIO DA CONSULTA
-        // ==============================================
 
         setUltimaAtualizacao(
           new Date()
         );
 
-
-        // ==============================================
-        // LIMPAR ERROS ANTERIORES
-        // ==============================================
-
         setErroAtualizacao(
           false
         );
 
-
         setErroInicial(
           null
         );
-
 
       } catch (error) {
 
@@ -570,15 +473,9 @@ export default function MapaBrasil() {
           error
         );
 
-
         if (!componenteAtivo) {
-
           return;
-
         }
-
-
-        // Primeira consulta falhou.
 
         if (
           primeiraConsulta
@@ -588,13 +485,7 @@ export default function MapaBrasil() {
             "Não foi possível carregar os resultados eleitorais."
           );
 
-        }
-
-        // Atualização posterior falhou.
-        //
-        // Os resultados anteriores permanecem.
-
-        else {
+        } else {
 
           setErroAtualizacao(
             true
@@ -602,19 +493,14 @@ export default function MapaBrasil() {
 
         }
 
-
       } finally {
 
         consultaEmAndamento =
           false;
 
-
         if (!componenteAtivo) {
-
           return;
-
         }
-
 
         if (
           primeiraConsulta
@@ -623,33 +509,20 @@ export default function MapaBrasil() {
           primeiraConsulta =
             false;
 
-
           setCarregando(
             false
           );
-
         }
-
 
         setAtualizando(
           false
         );
-
       }
-
     }
 
 
-    // ==================================================
-    // PRIMEIRA CONSULTA
-    // ==================================================
-
     void consultarResultados();
 
-
-    // ==================================================
-    // ATUALIZAÇÃO AUTOMÁTICA
-    // ==================================================
 
     const intervalo =
       window.setInterval(
@@ -662,15 +535,10 @@ export default function MapaBrasil() {
       );
 
 
-    // ==================================================
-    // LIMPEZA
-    // ==================================================
-
     return () => {
 
       componenteAtivo =
         false;
-
 
       window.clearInterval(
         intervalo
@@ -682,7 +550,7 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // RESULTADO DA UF SELECIONADA
+  // RESULTADO DO ESTADO SELECIONADO
   // ====================================================
 
   const resultadoSelecionado =
@@ -691,14 +559,11 @@ export default function MapaBrasil() {
       if (
         !estadoSelecionado
       ) {
-
         return null;
-
       }
 
-
       return (
-        resultados.find(
+        resultadosExibidos.find(
           (estado) =>
             estado.uf ===
             estadoSelecionado
@@ -707,50 +572,30 @@ export default function MapaBrasil() {
 
     }, [
       estadoSelecionado,
-      resultados,
+      resultadosExibidos,
     ]);
 
 
   // ====================================================
-  // 1. DESENHAR GEOMETRIA DO MAPA
-  // ====================================================
-  //
-  // Este effect depende SOMENTE do GeoJSON.
-  //
-  // Portanto:
-  //
-  // - atualização dos resultados não redesenha o Brasil;
-  // - clicar em uma UF não redesenha o Brasil;
-  // - a geometria é construída uma única vez.
+  // DESENHAR GEOMETRIA
   // ====================================================
 
   useEffect(() => {
 
     if (!geojson) {
-
       return;
-
     }
-
 
     const elementoSvg =
       svgRef.current;
 
-
     if (!elementoSvg) {
-
       return;
-
     }
 
 
-    // ==================================================
-    // DIMENSÕES
-    // ==================================================
-
     const largura =
       800;
-
 
     const altura =
       760;
@@ -762,47 +607,28 @@ export default function MapaBrasil() {
       );
 
 
-    // ==================================================
-    // LIMPAR SVG
-    // ==================================================
-    //
-    // Isso acontece somente quando o GeoJSON muda.
-    // ==================================================
-
     svg
       .selectAll("*")
       .remove();
 
-
-    // ==================================================
-    // CONFIGURAÇÃO DO SVG
-    // ==================================================
 
     svg
       .attr(
         "viewBox",
         `0 0 ${largura} ${altura}`
       )
-
       .attr(
         "preserveAspectRatio",
         "xMidYMid meet"
       );
 
 
-    // ==================================================
-    // PROJEÇÃO
-    // ==================================================
-
     const projection =
       d3
         .geoMercator()
         .fitExtent(
           [
-            [
-              25,
-              25,
-            ],
+            [25, 25],
             [
               largura - 25,
               altura - 25,
@@ -811,10 +637,6 @@ export default function MapaBrasil() {
           geojson
         );
 
-
-    // ==================================================
-    // GERADOR DE CAMINHOS
-    // ==================================================
 
     const path =
       d3
@@ -825,22 +647,17 @@ export default function MapaBrasil() {
 
 
     // ==================================================
-    // CAMADA DOS ESTADOS
+    // ESTADOS
     // ==================================================
 
     const grupoEstados =
       svg
         .append("g")
-
         .attr(
           "class",
           "camada-estados"
         );
 
-
-    // ==================================================
-    // DESENHAR UFs
-    // ==================================================
 
     grupoEstados
       .selectAll<
@@ -862,19 +679,13 @@ export default function MapaBrasil() {
       .attr(
         "data-uf",
         (estado) =>
-          estado
-            .properties
-            .SIGLA_UF
+          estado.properties.SIGLA_UF
       )
 
       .attr(
         "d",
         path
       )
-
-      // Inicialmente todas ficam neutras.
-      //
-      // Outro effect aplicará as cores eleitorais.
 
       .attr(
         "fill",
@@ -901,28 +712,20 @@ export default function MapaBrasil() {
         "pointer"
       )
 
-
-      // ================================================
-      // MOUSE ENTER
-      // ================================================
-
       .on(
         "mouseenter",
         function () {
 
           d3
             .select(this)
-
             .attr(
               "opacity",
               0.75
             )
-
             .attr(
               "stroke",
               "#111827"
             )
-
             .attr(
               "stroke-width",
               2
@@ -931,11 +734,6 @@ export default function MapaBrasil() {
         }
       )
 
-
-      // ================================================
-      // MOUSE LEAVE
-      // ================================================
-
       .on(
         "mouseleave",
         function () {
@@ -943,31 +741,26 @@ export default function MapaBrasil() {
           const elemento =
             d3.select(this);
 
-
           const uf =
             elemento.attr(
               "data-uf"
             );
 
-
           const selecionado =
             uf ===
             estadoSelecionadoRef.current;
-
 
           elemento
             .attr(
               "opacity",
               1
             )
-
             .attr(
               "stroke",
               selecionado
                 ? "#111827"
                 : "#ffffff"
             )
-
             .attr(
               "stroke-width",
               selecionado
@@ -978,11 +771,6 @@ export default function MapaBrasil() {
         }
       )
 
-
-      // ================================================
-      // CLIQUE
-      // ================================================
-
       .on(
         "click",
         function (
@@ -991,9 +779,7 @@ export default function MapaBrasil() {
         ) {
 
           setEstadoSelecionado(
-            estado
-              .properties
-              .SIGLA_UF
+            estado.properties.SIGLA_UF
           );
 
         }
@@ -1001,22 +787,17 @@ export default function MapaBrasil() {
 
 
     // ==================================================
-    // CAMADA DAS SIGLAS
+    // SIGLAS
     // ==================================================
 
     const grupoSiglas =
       svg
         .append("g")
-
         .attr(
           "class",
           "camada-siglas"
         );
 
-
-    // ==================================================
-    // SIGLAS DAS UFs
-    // ==================================================
 
     grupoSiglas
       .selectAll<
@@ -1038,7 +819,6 @@ export default function MapaBrasil() {
             path.centroid(
               estado
             );
-
 
           return (
             `translate(` +
@@ -1082,11 +862,8 @@ export default function MapaBrasil() {
 
       .text(
         (estado) =>
-          estado
-            .properties
-            .SIGLA_UF
+          estado.properties.SIGLA_UF
       );
-
 
   }, [
     geojson,
@@ -1094,23 +871,21 @@ export default function MapaBrasil() {
 
 
   // ====================================================
-  // 2. ATUALIZAR SOMENTE AS CORES
+  // ATUALIZAR CORES
   // ====================================================
   //
-  // Quando chegam novos resultados:
+  // Esta parte funciona tanto para:
   //
-  // NÃO apagamos o SVG.
-  // NÃO recriamos as geometrias.
+  // - resultados oficiais;
+  // - resultados simulados.
   //
-  // Apenas modificamos o atributo fill.
+  // A geometria permanece intacta.
   // ====================================================
 
   useEffect(() => {
 
     if (!svgRef.current) {
-
       return;
-
     }
 
 
@@ -1120,20 +895,6 @@ export default function MapaBrasil() {
       );
 
 
-    // ==================================================
-    // ÍNDICE DOS RESULTADOS
-    // ==================================================
-    //
-    // Exemplo:
-    //
-    // PE -> resultado de Pernambuco
-    // SP -> resultado de São Paulo
-    // BA -> resultado da Bahia
-    //
-    // Isso é mais eficiente do que usar .find()
-    // para cada geometria.
-    // ==================================================
-
     const resultadosPorUF =
       new Map<
         string,
@@ -1141,7 +902,7 @@ export default function MapaBrasil() {
       >();
 
 
-    resultados.forEach(
+    resultadosExibidos.forEach(
       (resultado) => {
 
         resultadosPorUF.set(
@@ -1152,10 +913,6 @@ export default function MapaBrasil() {
       }
     );
 
-
-    // ==================================================
-    // ALTERAR SOMENTE O FILL
-    // ==================================================
 
     svg
       .selectAll<
@@ -1176,16 +933,12 @@ export default function MapaBrasil() {
         (estado) => {
 
           const uf =
-            estado
-              .properties
-              .SIGLA_UF;
-
+            estado.properties.SIGLA_UF;
 
           const resultado =
             resultadosPorUF.get(
               uf
             );
-
 
           return obterCorEstado(
             resultado
@@ -1194,36 +947,23 @@ export default function MapaBrasil() {
         }
       );
 
-
   }, [
-    resultados,
+    resultadosExibidos,
   ]);
 
 
   // ====================================================
-  // 3. ATUALIZAR SOMENTE A UF SELECIONADA
-  // ====================================================
-  //
-  // Quando você clica em PE, por exemplo:
-  //
-  // - não redesenhamos PE;
-  // - não redesenhamos as outras 26 UFs;
-  // - apenas alteramos as bordas.
+  // ATUALIZAR SELEÇÃO
   // ====================================================
 
   useEffect(() => {
-
-    // Atualiza o valor utilizado
-    // pelos eventos do D3.
 
     estadoSelecionadoRef.current =
       estadoSelecionado;
 
 
     if (!svgRef.current) {
-
       return;
-
     }
 
 
@@ -1244,9 +984,7 @@ export default function MapaBrasil() {
       .attr(
         "stroke",
         (estado) =>
-          estado
-            .properties
-            .SIGLA_UF ===
+          estado.properties.SIGLA_UF ===
           estadoSelecionado
             ? "#111827"
             : "#ffffff"
@@ -1255,14 +993,11 @@ export default function MapaBrasil() {
       .attr(
         "stroke-width",
         (estado) =>
-          estado
-            .properties
-            .SIGLA_UF ===
+          estado.properties.SIGLA_UF ===
           estadoSelecionado
             ? 3
             : 1.4
       );
-
 
   }, [
     estadoSelecionado,
@@ -1274,7 +1009,8 @@ export default function MapaBrasil() {
   // ====================================================
 
   if (
-    erroInicial
+    erroInicial &&
+    modoDados === "oficial"
   ) {
 
     return (
@@ -1300,16 +1036,125 @@ export default function MapaBrasil() {
 
 
       {/* ==================================================
-          CABEÇALHO
+          CONTROLE DE FONTE DOS DADOS
+      ================================================== */}
+
+      <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+
+        <div>
+
+          <p className="text-sm font-semibold text-gray-900">
+
+            Dados exibidos
+
+          </p>
+
+          <p className="mt-1 text-xs text-gray-500">
+
+            Alterne entre os dados oficiais e o ambiente de teste.
+
+          </p>
+
+        </div>
+
+
+        <div className="inline-flex w-fit rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+
+          {/* OFICIAL */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setModoDados(
+                "oficial"
+              )
+            }
+            className={
+              modoDados ===
+              "oficial"
+                ? "rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+                : "rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+            }
+          >
+
+            Oficial
+
+          </button>
+
+
+          {/* SIMULAÇÃO */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setModoDados(
+                "simulacao"
+              )
+            }
+            className={
+              modoDados ===
+              "simulacao"
+                ? "rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white"
+                : "rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+            }
+          >
+
+            Simulação
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {/* ==================================================
+          AVISO DE SIMULAÇÃO
+      ================================================== */}
+
+      {modoDados ===
+        "simulacao" && (
+
+        <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4">
+
+          <div className="flex gap-3">
+
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 font-bold text-amber-700">
+
+              !
+
+            </div>
+
+            <div>
+
+              <p className="font-bold text-amber-900">
+
+                MODO DE SIMULAÇÃO
+
+              </p>
+
+              <p className="mt-1 text-sm text-amber-800">
+
+                Os números exibidos são fictícios e servem exclusivamente para testar o funcionamento do monitor. Não representam pesquisa, projeção ou resultado eleitoral oficial.
+
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* ==================================================
+          CABEÇALHO DO MAPA
       ================================================== */}
 
       <div className="mb-6">
 
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-
-
-          {/* TEXTO */}
 
           <div>
 
@@ -1318,7 +1163,6 @@ export default function MapaBrasil() {
               Resultado por estado
 
             </h2>
-
 
             <p className="mt-1 text-sm text-gray-500">
 
@@ -1330,66 +1174,50 @@ export default function MapaBrasil() {
 
 
           {/* ==============================================
-              STATUS
+              STATUS — SOMENTE DADOS OFICIAIS
           ============================================== */}
 
-          <div className="text-sm">
+          {modoDados ===
+            "oficial" && (
 
+            <div className="text-sm">
 
-            {/* CARREGANDO */}
+              {carregando && (
 
-            {carregando && (
+                <div className="flex items-center gap-2 text-gray-500">
 
-              <div className="flex items-center gap-2 text-gray-500">
-
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-gray-400" />
-
-                <span>
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-gray-400" />
 
                   Carregando resultados...
-
-                </span>
-
-              </div>
-
-            )}
-
-
-            {/* ATUALIZANDO */}
-
-            {!carregando &&
-              atualizando && (
-
-                <div className="flex items-center gap-2 text-blue-600">
-
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500" />
-
-
-                  <span>
-
-                    Atualizando resultados...
-
-                  </span>
 
                 </div>
 
               )}
 
 
-            {/* ATUALIZADO */}
+              {!carregando &&
+                atualizando && (
 
-            {!carregando &&
-              !atualizando &&
-              !erroAtualizacao &&
-              !dadosParciais &&
-              ultimaAtualizacao && (
+                <div className="flex items-center gap-2 text-blue-600">
 
-                <div className="flex items-center gap-2 text-emerald-600">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500" />
 
-                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                  Atualizando resultados...
+
+                </div>
+
+              )}
 
 
-                  <span>
+              {!carregando &&
+                !atualizando &&
+                !erroAtualizacao &&
+                !dadosParciais &&
+                ultimaAtualizacao && (
+
+                  <div className="flex items-center gap-2 text-emerald-600">
+
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
 
                     Atualizado às{" "}
 
@@ -1398,55 +1226,65 @@ export default function MapaBrasil() {
                       {
                         hour:
                           "2-digit",
-
                         minute:
                           "2-digit",
-
                         second:
                           "2-digit",
                       }
                     )}
 
-                  </span>
+                  </div>
 
-                </div>
-
-              )}
+                )}
 
 
-            {/* DADOS PARCIAIS */}
+              {!carregando &&
+                !atualizando &&
+                dadosParciais && (
 
-            {!carregando &&
-              !atualizando &&
-              dadosParciais && (
+                  <div className="text-amber-600">
 
-                <div className="text-amber-600">
+                    ⚠ Dados parciais:{" "}
 
-                  ⚠ Dados parciais:{" "}
+                    {totalEstados}/
+                    {totalEsperado} UFs
 
-                  {totalEstados}/
-                  {totalEsperado} UFs
+                  </div>
 
-                </div>
-
-              )}
+                )}
 
 
-            {/* FALHA DE ATUALIZAÇÃO */}
+              {!carregando &&
+                !atualizando &&
+                erroAtualizacao && (
 
-            {!carregando &&
-              !atualizando &&
-              erroAtualizacao && (
+                  <div className="max-w-xs text-amber-600">
 
-                <div className="max-w-xs text-amber-600">
+                    ⚠ Não foi possível atualizar. Exibindo os últimos dados disponíveis.
 
-                  ⚠ Não foi possível atualizar. Exibindo os últimos dados disponíveis.
+                  </div>
 
-                </div>
+                )}
 
-              )}
+            </div>
 
-          </div>
+          )}
+
+
+          {/* STATUS DA SIMULAÇÃO */}
+
+          {modoDados ===
+            "simulacao" && (
+
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
+
+              <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+
+              Dados fictícios
+
+            </div>
+
+          )}
 
         </div>
 
@@ -1455,7 +1293,9 @@ export default function MapaBrasil() {
             UFs COM ERRO
         ============================================== */}
 
-        {dadosParciais &&
+        {modoDados ===
+          "oficial" &&
+          dadosParciais &&
           estadosComErro.length > 0 && (
 
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -1484,23 +1324,9 @@ export default function MapaBrasil() {
       <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
 
 
-        {/* ==============================================
-            MAPA
-        ============================================== */}
+        {/* MAPA */}
 
         <div>
-
-
-          {/* ============================================
-              IMPORTANTE
-          ============================================
-              
-              O SVG permanece montado mesmo enquanto
-              os resultados estão carregando.
-              
-              Isso permite que o effect do D3 encontre
-              svgRef.current e desenhe o mapa.
-          ============================================ */}
 
           <svg
             ref={svgRef}
@@ -1509,14 +1335,9 @@ export default function MapaBrasil() {
           />
 
 
-          {/* ============================================
-              LEGENDA
-          ============================================ */}
+          {/* LEGENDA */}
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-5 text-sm">
-
-
-            {/* LULA */}
 
             <div className="flex items-center gap-2">
 
@@ -1530,7 +1351,6 @@ export default function MapaBrasil() {
                 }}
               />
 
-
               <span className="text-gray-600">
 
                 Lula
@@ -1539,8 +1359,6 @@ export default function MapaBrasil() {
 
             </div>
 
-
-            {/* FLAVIO BOLSONARO */}
 
             <div className="flex items-center gap-2">
 
@@ -1554,7 +1372,6 @@ export default function MapaBrasil() {
                 }}
               />
 
-
               <span className="text-gray-600">
 
                 Flavio Bolsonaro
@@ -1563,8 +1380,6 @@ export default function MapaBrasil() {
 
             </div>
 
-
-            {/* AGUARDANDO */}
 
             <div className="flex items-center gap-2">
 
@@ -1575,7 +1390,6 @@ export default function MapaBrasil() {
                     COR_NEUTRA,
                 }}
               />
-
 
               <span className="text-gray-600">
 
@@ -1590,48 +1404,42 @@ export default function MapaBrasil() {
         </div>
 
 
-        {/* ==============================================
-            PAINEL ESTADUAL
-        ============================================== */}
+        {/* ==================================================
+            PAINEL
+        ================================================== */}
 
         <div>
 
+          {carregando &&
+            modoDados ===
+              "oficial" && (
 
-          {/* ============================================
-              CARREGANDO
-          ============================================ */}
+              <div className="flex min-h-72 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
 
-          {carregando && (
+                <div>
 
-            <div className="flex min-h-72 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+                  <p className="font-semibold text-gray-700">
 
-              <div>
+                    Carregando resultados
 
-                <p className="font-semibold text-gray-700">
+                  </p>
 
-                  Carregando resultados
+                  <p className="mt-2 text-sm text-gray-500">
 
-                </p>
+                    Aguarde enquanto os dados eleitorais são consultados.
 
+                  </p>
 
-                <p className="mt-2 text-sm text-gray-500">
-
-                  Aguarde enquanto os dados eleitorais são consultados.
-
-                </p>
+                </div>
 
               </div>
 
-            </div>
-
-          )}
+            )}
 
 
-          {/* ============================================
-              NENHUM ESTADO SELECIONADO
-          ============================================ */}
-
-          {!carregando &&
+          {(!carregando ||
+            modoDados ===
+              "simulacao") &&
             !resultadoSelecionado && (
 
               <div className="flex min-h-72 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
@@ -1643,7 +1451,6 @@ export default function MapaBrasil() {
                     Selecione um estado
 
                   </p>
-
 
                   <p className="mt-2 text-sm text-gray-500">
 
@@ -1658,104 +1465,123 @@ export default function MapaBrasil() {
             )}
 
 
-          {/* ============================================
-              ESTADO SELECIONADO
-          ============================================ */}
+          {resultadoSelecionado && (
 
-          {!carregando &&
-            resultadoSelecionado && (
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
 
-                {/* ======================================
-                    ESTADO
-                ====================================== */}
+              {/* ESTADO */}
 
-                <div className="border-b border-gray-100 pb-5">
+              <div className="border-b border-gray-100 pb-5">
 
-                  <p className="text-sm font-medium text-gray-500">
+                <div className="flex items-start justify-between gap-4">
 
-                    {resultadoSelecionado.uf}
+                  <div>
 
-                  </p>
+                    <p className="text-sm font-medium text-gray-500">
+
+                      {resultadoSelecionado.uf}
+
+                    </p>
+
+                    <h3 className="mt-1 text-2xl font-bold text-gray-900">
+
+                      {resultadoSelecionado.nome}
+
+                    </h3>
+
+                  </div>
 
 
-                  <h3 className="mt-1 text-2xl font-bold text-gray-900">
+                  {modoDados ===
+                    "simulacao" && (
 
-                    {resultadoSelecionado.nome}
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
 
-                  </h3>
-
-                </div>
-
-
-                {/* ======================================
-                    TOTALIZAÇÃO
-                ====================================== */}
-
-                <div className="py-5">
-
-                  <div className="flex items-center justify-between">
-
-                    <span className="text-sm text-gray-500">
-
-                      Seções totalizadas
+                      SIMULAÇÃO
 
                     </span>
 
+                  )}
 
-                    <strong className="text-gray-900">
+                </div>
 
-                      {resultadoSelecionado.totalizado
-                        .toFixed(2)
-                        .replace(
-                          ".",
-                          ","
-                        )}
-                      %
-
-                    </strong>
-
-                  </div>
+              </div>
 
 
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+              {/* TOTALIZAÇÃO */}
 
-                    <div
-                      className="h-full rounded-full bg-gray-800 transition-all duration-500"
-                      style={{
-                        width:
-                          `${resultadoSelecionado.totalizado}%`,
-                      }}
-                    />
+              <div className="py-5">
 
-                  </div>
+                <div className="flex items-center justify-between">
+
+                  <span className="text-sm text-gray-500">
+
+                    Seções totalizadas
+
+                  </span>
+
+                  <strong className="text-gray-900">
+
+                    {resultadoSelecionado.totalizado
+                      .toFixed(2)
+                      .replace(
+                        ".",
+                        ","
+                      )}
+                    %
+
+                  </strong>
 
                 </div>
 
 
-                {/* ======================================
-                    CANDIDATOS
-                ====================================== */}
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
 
-                <div className="space-y-4">
+                  <div
+                    className="h-full rounded-full bg-gray-800 transition-all duration-500"
+                    style={{
+                      width:
+                        `${resultadoSelecionado.totalizado}%`,
+                    }}
+                  />
 
-                  {resultadoSelecionado.candidatos.map(
-                    (candidato) => (
+                </div>
 
-                      <div
-                        key={
-                          candidato.numero
-                        }
-                        className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-                      >
+              </div>
 
 
-                        <div className="flex items-start justify-between gap-4">
+              {/* CANDIDATOS */}
 
+              <div className="space-y-4">
 
-                          {/* CANDIDATO */}
+                {resultadoSelecionado.candidatos.map(
+                  (candidato) => (
+
+                    <div
+                      key={
+                        candidato.numero
+                      }
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                    >
+
+                      <div className="flex items-start justify-between gap-4">
+
+                        <div className="flex items-start gap-3">
+
+                          {/* COR DO CANDIDATO */}
+
+                          <span
+                            className="mt-1.5 h-3 w-3 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor:
+                                CORES_CANDIDATOS[
+                                  candidato.numero
+                                ] ??
+                                COR_NEUTRA,
+                            }}
+                          />
+
 
                           <div>
 
@@ -1764,7 +1590,6 @@ export default function MapaBrasil() {
                               {candidato.numero}
 
                             </p>
-
 
                             <p className="mt-1 font-semibold text-gray-900">
 
@@ -1775,101 +1600,103 @@ export default function MapaBrasil() {
 
                           </div>
 
-
-                          {/* PERCENTUAL */}
-
-                          <p className="text-xl font-bold text-gray-900">
-
-                            {candidato.percentual
-                              .toFixed(2)
-                              .replace(
-                                ".",
-                                ","
-                              )}
-                            %
-
-                          </p>
-
                         </div>
 
 
-                        {/* VOTOS */}
+                        <p className="text-xl font-bold text-gray-900">
 
-                        <p className="mt-2 text-sm text-gray-500">
-
-                          {candidato.votos.toLocaleString(
-                            "pt-BR"
-                          )}{" "}
-                          votos
+                          {candidato.percentual
+                            .toFixed(2)
+                            .replace(
+                              ".",
+                              ","
+                            )}
+                          %
 
                         </p>
 
                       </div>
 
-                    )
-                  )}
 
-                </div>
+                      <p className="mt-2 pl-6 text-sm text-gray-500">
 
-
-                {/* ======================================
-                    COMPARECIMENTO E ABSTENÇÕES
-                ====================================== */}
-
-                <div className="mt-6 border-t border-gray-100 pt-5">
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-
-
-                    <div>
-
-                      <p className="text-gray-400">
-
-                        Comparecimento
-
-                      </p>
-
-
-                      <p className="mt-1 font-semibold text-gray-700">
-
-                        {resultadoSelecionado.comparecimento.toLocaleString(
+                        {candidato.votos.toLocaleString(
                           "pt-BR"
-                        )}
+                        )}{" "}
+                        votos
 
                       </p>
 
                     </div>
 
+                  )
+                )}
 
-                    <div>
-
-                      <p className="text-gray-400">
-
-                        Abstenções
-
-                      </p>
+              </div>
 
 
-                      <p className="mt-1 font-semibold text-gray-700">
+              {/* INFORMAÇÕES */}
 
-                        {resultadoSelecionado.abstencoes.toLocaleString(
-                          "pt-BR"
-                        )}
+              <div className="mt-6 border-t border-gray-100 pt-5">
 
-                      </p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
 
-                    </div>
+                  <div>
+
+                    <p className="text-gray-400">
+
+                      Comparecimento
+
+                    </p>
+
+                    <p className="mt-1 font-semibold text-gray-700">
+
+                      {resultadoSelecionado.comparecimento.toLocaleString(
+                        "pt-BR"
+                      )}
+
+                    </p>
+
+                  </div>
+
+
+                  <div>
+
+                    <p className="text-gray-400">
+
+                      Abstenções
+
+                    </p>
+
+                    <p className="mt-1 font-semibold text-gray-700">
+
+                      {resultadoSelecionado.abstencoes.toLocaleString(
+                        "pt-BR"
+                      )}
+
+                    </p>
 
                   </div>
 
                 </div>
 
+              </div>
 
-                {/* ======================================
-                    HORÁRIO DO TSE
-                ====================================== */}
 
-                {resultadoSelecionado.atualizadoEm && (
+              {/* FONTE */}
+
+              {modoDados ===
+                "simulacao" ? (
+
+                <p className="mt-5 text-xs font-medium text-amber-600">
+
+                  Dados fictícios para teste da interface.
+
+                </p>
+
+              ) : (
+
+                resultadoSelecionado.atualizadoEm && (
 
                   <p className="mt-5 text-xs text-gray-400">
 
@@ -1879,11 +1706,13 @@ export default function MapaBrasil() {
 
                   </p>
 
-                )}
+                )
 
-              </div>
+              )}
 
-            )}
+            </div>
+
+          )}
 
         </div>
 
@@ -1892,5 +1721,4 @@ export default function MapaBrasil() {
     </section>
 
   );
-
 }
