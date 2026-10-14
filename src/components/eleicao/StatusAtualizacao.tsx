@@ -28,79 +28,84 @@ export default function StatusAtualizacao({
   totalEsperado,
   ultimaAtualizacao,
 }: Props) {
-  return (
-    <div>
-      {carregando && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-gray-400" />
+  if (carregando) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
 
-          Carregando resultados...
+        Consultando dados oficiais...
+      </div>
+    );
+  }
+
+  if (atualizando) {
+    return (
+      <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+        </span>
+
+        Atualizando resultados...
+      </div>
+    );
+  }
+
+  if (erroAtualizacao) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        Atualização temporariamente indisponível. Os últimos dados recebidos permanecem em exibição.
+      </div>
+    );
+  }
+
+  if (dadosParciais) {
+    return (
+      <div className="text-right">
+        <div className="flex items-center justify-end gap-2 text-sm font-medium text-amber-700">
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+
+          Dados parcialmente disponíveis
         </div>
-      )}
 
-      {!carregando &&
-        atualizando && (
-          <div className="flex items-center gap-2 text-sm text-blue-600">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+        <p className="mt-1 text-xs text-slate-400">
+          {totalEstados} de {totalEsperado} UFs carregadas
+        </p>
 
-            Atualizando resultados...
-          </div>
+        {estadosComErro.length > 0 && (
+          <p className="mt-1 text-xs text-amber-600">
+            Indisponíveis:{" "}
+            {estadosComErro.join(", ")}
+          </p>
         )}
+      </div>
+    );
+  }
 
-      {!carregando &&
-        !atualizando &&
-        erroAtualizacao && (
-          <div className="max-w-sm text-sm text-amber-600">
-            ⚠ Não foi possível obter a atualização mais recente. Exibindo os últimos dados disponíveis.
-          </div>
-        )}
+  if (ultimaAtualizacao) {
+    return (
+      <div className="text-right">
+        <div className="flex items-center justify-end gap-2 text-sm font-medium text-slate-600">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
 
-      {!carregando &&
-        !atualizando &&
-        !erroAtualizacao &&
-        dadosParciais && (
-          <div className="text-sm text-amber-600">
-            ⚠ Dados parciais:{" "}
-            {totalEstados}/
-            {totalEsperado} UFs
-          </div>
-        )}
+          Atualização automática
+        </div>
 
-      {!carregando &&
-        !atualizando &&
-        !erroAtualizacao &&
-        !dadosParciais &&
-        ultimaAtualizacao && (
-          <div className="flex items-center gap-2 text-sm text-emerald-600">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+        <p className="mt-1 text-xs text-slate-400">
+          Última consulta às{" "}
+          {ultimaAtualizacao.toLocaleTimeString(
+            "pt-BR",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }
+          )}
+        </p>
+      </div>
+    );
+  }
 
-            <span>
-              Dados oficiais · Atualizado às{" "}
-              {ultimaAtualizacao.toLocaleTimeString(
-                "pt-BR",
-                {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                }
-              )}
-            </span>
-          </div>
-        )}
-
-      {!carregando &&
-        dadosParciais &&
-        estadosComErro.length >
-          0 && (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Temporariamente indisponível:{" "}
-            <strong>
-              {estadosComErro.join(
-                ", "
-              )}
-            </strong>
-          </div>
-        )}
-    </div>
-  );
+  return null;
 }

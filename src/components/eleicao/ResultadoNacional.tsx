@@ -112,18 +112,22 @@ export default function ResultadoNacional() {
     };
   }, []);
 
+  // ====================================================
+  // CARREGAMENTO
+  // ====================================================
+
   if (
     carregando &&
     !resultado
   ) {
     return (
-      <section className="rounded-2xl border border-gray-200 bg-white p-6">
-        <div className="flex min-h-52 items-center justify-center">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex min-h-80 items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-gray-800" />
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-[3px] border-slate-200 border-t-slate-700" />
 
-            <p className="mt-4 text-sm font-medium text-gray-600">
-              Carregando resultado nacional...
+            <p className="mt-4 text-sm font-medium text-slate-500">
+              Consultando resultado nacional...
             </p>
           </div>
         </div>
@@ -131,14 +135,18 @@ export default function ResultadoNacional() {
     );
   }
 
+  // ====================================================
+  // ERRO INICIAL
+  // ====================================================
+
   if (
     erroAtualizacao &&
     !resultado
   ) {
     return (
       <section className="rounded-2xl border border-red-200 bg-red-50 p-6">
-        <p className="font-semibold text-red-700">
-          Não foi possível carregar o resultado nacional.
+        <p className="font-semibold text-red-800">
+          Resultado nacional temporariamente indisponível
         </p>
 
         <p className="mt-1 text-sm text-red-600">
@@ -155,21 +163,19 @@ export default function ResultadoNacional() {
   const lula =
     resultado.candidatos.find(
       (candidato) =>
-        candidato.numero ===
-        "13"
+        candidato.numero === "13"
     );
 
   const flavio =
     resultado.candidatos.find(
       (candidato) =>
-        candidato.numero ===
-        "22"
+        candidato.numero === "22"
     );
 
   if (!lula || !flavio) {
     return (
-      <section className="rounded-2xl border border-gray-200 bg-white p-6">
-        <p className="text-sm text-gray-500">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6">
+        <p className="text-sm text-slate-500">
           Aguardando dados dos candidatos.
         </p>
       </section>
@@ -191,39 +197,58 @@ export default function ResultadoNacional() {
         ? lula
         : flavio;
 
+  const apuracaoIniciada =
+    resultado.totalizado > 0 ||
+    resultado.votosValidos > 0;
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-      {/* CABEÇALHO */}
+      {/* ==================================================
+          TOPO
+      ================================================== */}
 
-      <div className="border-b border-gray-100 px-6 py-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="px-6 pb-5 pt-6 sm:px-8 sm:pt-7">
+
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+              Brasil
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
               Resultado Nacional
             </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
-              Presidente · 2º turno
+            <p className="mt-1 text-sm text-slate-500">
+              Presidente da República · 2º turno
             </p>
           </div>
 
-          <div className="text-left sm:text-right">
-            <p className="text-2xl font-bold text-gray-900">
-              {formatarPercentual(
-                resultado.totalizado
-              )}
-            </p>
+          <div className="sm:text-right">
+            <div className="flex items-baseline gap-2 sm:justify-end">
+              <strong className="text-3xl font-bold tracking-tight text-slate-950">
+                {formatarPercentual(
+                  resultado.totalizado
+                )}
+              </strong>
 
-            <p className="text-xs text-gray-500">
-              seções totalizadas
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                totalizado
+              </span>
+            </div>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Atualização oficial do TSE
             </p>
           </div>
         </div>
 
-        <div className="mt-5 h-2 overflow-hidden rounded-full bg-gray-100">
+        {/* TOTALIZAÇÃO */}
+
+        <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gray-900 transition-all duration-700"
+            className="h-full rounded-full bg-slate-800 transition-all duration-700"
             style={{
               width: `${Math.min(
                 resultado.totalizado,
@@ -234,141 +259,21 @@ export default function ResultadoNacional() {
         </div>
       </div>
 
-      {/* CANDIDATOS */}
+      {/* ==================================================
+          PLACAR
+      ================================================== */}
 
-      <div className="grid md:grid-cols-2">
+      <div className="border-y border-slate-100 bg-slate-50/60 px-6 py-7 sm:px-8">
 
-        {/* LULA */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-4 sm:gap-8">
 
-        <div className="border-b border-gray-100 p-6 md:border-b-0 md:border-r">
-          <div className="flex items-center gap-3">
-            <span
-              className="h-4 w-4 rounded-full"
-              style={{
-                backgroundColor:
-                  obterCorCandidato(
-                    lula.numero
-                  ),
-              }}
-            />
+          {/* LULA */}
 
-            <span className="text-sm font-bold text-gray-400">
-              {lula.numero}
-            </span>
-          </div>
-
-          <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            {lula.nomeUrna ??
-              lula.nome}
-          </p>
-
-          <p className="mt-1 text-4xl font-bold tracking-tight text-gray-900">
-            {formatarPercentual(
-              lula.percentual
-            )}
-          </p>
-
-          <p className="mt-2 text-sm text-gray-500">
-            <strong className="font-semibold text-gray-700">
-              {formatarNumero(
-                lula.votos
-              )}
-            </strong>{" "}
-            votos
-          </p>
-
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${Math.min(
-                  lula.percentual,
-                  100
-                )}%`,
-                backgroundColor:
-                  obterCorCandidato(
-                    lula.numero
-                  ),
-              }}
-            />
-          </div>
-        </div>
-
-        {/* FLAVIO */}
-
-        <div className="p-6 md:text-right">
-          <div className="flex items-center gap-3 md:justify-end">
-            <span className="text-sm font-bold text-gray-400">
-              {flavio.numero}
-            </span>
-
-            <span
-              className="h-4 w-4 rounded-full"
-              style={{
-                backgroundColor:
-                  obterCorCandidato(
-                    flavio.numero
-                  ),
-              }}
-            />
-          </div>
-
-          <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            {flavio.nomeUrna ??
-              flavio.nome}
-          </p>
-
-          <p className="mt-1 text-4xl font-bold tracking-tight text-gray-900">
-            {formatarPercentual(
-              flavio.percentual
-            )}
-          </p>
-
-          <p className="mt-2 text-sm text-gray-500">
-            <strong className="font-semibold text-gray-700">
-              {formatarNumero(
-                flavio.votos
-              )}
-            </strong>{" "}
-            votos
-          </p>
-
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="ml-auto h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${Math.min(
-                  flavio.percentual,
-                  100
-                )}%`,
-                backgroundColor:
-                  obterCorCandidato(
-                    flavio.numero
-                  ),
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* COMPARAÇÃO */}
-
-      <div className="border-t border-gray-100 px-6 py-5">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Distribuição dos votos válidos
-        </p>
-
-        <div className="flex h-4 overflow-hidden rounded-full bg-gray-100">
-          {resultado.votosValidos >
-            0 && (
-            <>
-              <div
-                className="h-full transition-all duration-700"
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className="h-3 w-3 rounded-full"
                 style={{
-                  width: `${Math.min(
-                    lula.percentual,
-                    100
-                  )}%`,
                   backgroundColor:
                     obterCorCandidato(
                       lula.numero
@@ -376,59 +281,150 @@ export default function ResultadoNacional() {
                 }}
               />
 
-              <div
-                className="h-full transition-all duration-700"
+              <span className="text-sm font-bold text-slate-400">
+                {lula.numero}
+              </span>
+            </div>
+
+            <h3 className="mt-3 text-base font-bold uppercase tracking-wide text-slate-800 sm:text-lg">
+              {lula.nomeUrna ??
+                lula.nome}
+            </h3>
+
+            <p className="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+              {formatarPercentual(
+                lula.percentual
+              )}
+            </p>
+
+            <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+              {formatarNumero(
+                lula.votos
+              )}{" "}
+              votos
+            </p>
+          </div>
+
+          {/* DIVISOR */}
+
+          <div className="pb-5 text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300">
+              ×
+            </span>
+          </div>
+
+          {/* FLAVIO */}
+
+          <div className="text-right">
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-sm font-bold text-slate-400">
+                {flavio.numero}
+              </span>
+
+              <span
+                className="h-3 w-3 rounded-full"
                 style={{
-                  width: `${Math.min(
-                    flavio.percentual,
-                    100
-                  )}%`,
                   backgroundColor:
                     obterCorCandidato(
                       flavio.numero
                     ),
                 }}
               />
-            </>
+            </div>
+
+            <h3 className="mt-3 text-base font-bold uppercase tracking-wide text-slate-800 sm:text-lg">
+              {flavio.nomeUrna ??
+                flavio.nome}
+            </h3>
+
+            <p className="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-5xl">
+              {formatarPercentual(
+                flavio.percentual
+              )}
+            </p>
+
+            <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+              {formatarNumero(
+                flavio.votos
+              )}{" "}
+              votos
+            </p>
+          </div>
+
+        </div>
+
+        {/* ==================================================
+            BARRA LULA × FLAVIO
+        ================================================== */}
+
+        <div className="mt-8">
+          <div className="flex h-3 overflow-hidden rounded-full bg-slate-200">
+            {apuracaoIniciada && (
+              <>
+                <div
+                  className="h-full transition-all duration-700"
+                  style={{
+                    width: `${Math.min(
+                      lula.percentual,
+                      100
+                    )}%`,
+                    backgroundColor:
+                      obterCorCandidato(
+                        lula.numero
+                      ),
+                  }}
+                />
+
+                <div
+                  className="h-full transition-all duration-700"
+                  style={{
+                    width: `${Math.min(
+                      flavio.percentual,
+                      100
+                    )}%`,
+                    backgroundColor:
+                      obterCorCandidato(
+                        flavio.numero
+                      ),
+                  }}
+                />
+              </>
+            )}
+          </div>
+
+          {!apuracaoIniciada && (
+            <p className="mt-3 text-center text-sm font-medium text-slate-400">
+              Aguardando início da totalização
+            </p>
           )}
         </div>
 
-        <div className="mt-2 flex justify-between text-xs font-semibold text-gray-500">
-          <span>
-            {formatarPercentual(
-              lula.percentual
-            )}
-          </span>
-
-          <span>
-            {formatarPercentual(
-              flavio.percentual
-            )}
-          </span>
-        </div>
       </div>
 
-      {/* RESUMO */}
+      {/* ==================================================
+          INDICADORES
+      ================================================== */}
 
-      <div className="grid gap-px border-t border-gray-100 bg-gray-100 sm:grid-cols-3">
-        <div className="bg-white px-6 py-4">
-          <p className="text-xs text-gray-400">
+      <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+
+        <div className="px-6 py-5 sm:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Votos válidos
           </p>
 
-          <p className="mt-1 font-bold text-gray-800">
+          <p className="mt-1.5 text-lg font-bold text-slate-800">
             {formatarNumero(
               resultado.votosValidos
             )}
           </p>
         </div>
 
-        <div className="bg-white px-6 py-4">
-          <p className="text-xs text-gray-400">
+        <div className="px-6 py-5 sm:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Diferença
           </p>
 
-          <p className="mt-1 font-bold text-gray-800">
+          <p className="mt-1.5 text-lg font-bold text-slate-800">
             {formatarNumero(
               diferencaVotos
             )}{" "}
@@ -436,44 +432,53 @@ export default function ResultadoNacional() {
           </p>
         </div>
 
-        <div className="bg-white px-6 py-4">
-          <p className="text-xs text-gray-400">
-            Liderança atual
+        <div className="px-6 py-5 sm:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Liderança
           </p>
 
-          <p className="mt-1 font-bold text-gray-800">
-            {lider
-              ? lider.nomeUrna ??
-                lider.nome
-              : "Empate"}
+          <p className="mt-1.5 text-lg font-bold text-slate-800">
+            {apuracaoIniciada
+              ? lider
+                ? lider.nomeUrna ??
+                  lider.nome
+                : "Empate"
+              : "—"}
           </p>
         </div>
+
       </div>
 
-      {/* RODAPÉ */}
+      {/* ==================================================
+          RODAPÉ
+      ================================================== */}
 
-      <div className="border-t border-gray-100 bg-gray-50 px-6 py-4">
-        <div className="flex flex-col gap-2 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Comparecimento:{" "}
-            <strong className="font-semibold text-gray-700">
-              {formatarNumero(
-                resultado.comparecimento
-              )}
-            </strong>
-          </span>
+      <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
 
-          <span>
-            Atualização TSE:{" "}
+        <span>
+          Comparecimento{" "}
+          <strong className="font-semibold text-slate-700">
+            {formatarNumero(
+              resultado.comparecimento
+            )}
+          </strong>
+        </span>
+
+        <span>
+          Última atualização:{" "}
+          <strong className="font-semibold text-slate-700">
             {resultado.atualizadoEm ||
               "aguardando"}
-          </span>
-        </div>
+          </strong>
+        </span>
+
       </div>
 
+      {/* ERRO DE ATUALIZAÇÃO */}
+
       {erroAtualizacao && (
-        <div className="border-t border-amber-200 bg-amber-50 px-6 py-3 text-xs text-amber-700">
-          Não foi possível obter a atualização mais recente. Os últimos dados nacionais disponíveis permanecem sendo exibidos.
+        <div className="border-t border-amber-200 bg-amber-50 px-6 py-3 text-xs text-amber-700 sm:px-8">
+          Não foi possível obter a atualização mais recente. Os últimos dados recebidos permanecem em exibição.
         </div>
       )}
 

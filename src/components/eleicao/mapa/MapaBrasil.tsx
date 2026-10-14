@@ -15,6 +15,8 @@ import type {
 
 import {
   COR_NEUTRA,
+  formatarPercentual,
+  obterCandidatoLider,
   obterCorEstado,
 } from "@/lib/eleicao";
 
@@ -45,6 +47,13 @@ type BrasilGeoJSON =
     PropriedadesUF
   >;
 
+interface TooltipEstado {
+  x: number;
+  y: number;
+  uf: string;
+  nome: string;
+}
+
 interface Props {
   resultados: ResultadoEstado[];
   carregando: boolean;
@@ -56,6 +65,11 @@ export default function MapaBrasil({
 }: Props) {
   const svgRef =
     useRef<SVGSVGElement | null>(
+      null
+    );
+
+  const containerMapaRef =
+    useRef<HTMLDivElement | null>(
       null
     );
 
@@ -82,6 +96,18 @@ export default function MapaBrasil({
   ] =
     useState<string | null>(null);
 
+  const [
+    tooltip,
+    setTooltip,
+  ] =
+    useState<TooltipEstado | null>(
+      null
+    );
+
+  // ====================================================
+  // RESULTADO DO ESTADO SELECIONADO
+  // ====================================================
+
   const resultadoSelecionado =
     useMemo(() => {
       if (!estadoSelecionado) {
@@ -101,7 +127,44 @@ export default function MapaBrasil({
     ]);
 
   // ====================================================
-  // GEOJSON
+  // RESULTADO DO ESTADO SOB O MOUSE
+  // ====================================================
+
+  const resultadoTooltip =
+    useMemo(() => {
+      if (!tooltip) {
+        return null;
+      }
+
+      return (
+        resultados.find(
+          (resultado) =>
+            resultado.uf ===
+            tooltip.uf
+        ) ?? null
+      );
+    }, [
+      tooltip,
+      resultados,
+    ]);
+
+  // ====================================================
+  // LÍDER DO ESTADO SOB O MOUSE
+  //
+  // IMPORTANTE:
+  // obterCandidatoLider recebe Candidato[],
+  // por isso passamos resultadoTooltip.candidatos.
+  // ====================================================
+
+  const liderTooltip =
+    resultadoTooltip
+      ? obterCandidatoLider(
+          resultadoTooltip.candidatos
+        )
+      : null;
+
+  // ====================================================
+  // CARREGAR GEOJSON
   // ====================================================
 
   useEffect(() => {
@@ -154,7 +217,7 @@ export default function MapaBrasil({
   }, []);
 
   // ====================================================
-  // DESENHAR GEOMETRIA
+  // DESENHAR MAPA
   // ====================================================
 
   useEffect(() => {
@@ -170,7 +233,7 @@ export default function MapaBrasil({
     }
 
     const largura = 800;
-    const altura = 760;
+    const altura = 720;
 
     const svg =
       d3.select(
@@ -191,14 +254,18 @@ export default function MapaBrasil({
         "xMidYMid meet"
       );
 
+    // ==================================================
+    // PROJEÇÃO
+    // ==================================================
+
     const projection =
       d3
         .geoMercator()
         .fitExtent(
           [
-            [25, 25],
+            [35, 25],
             [
-              largura - 25,
+              largura - 35,
               altura - 25,
             ],
           ],
@@ -212,12 +279,68 @@ export default function MapaBrasil({
           projection
         );
 
+    // ==================================================
+    // SOMBRA
+    // ==================================================
+
+    const defs =
+      svg.append("defs");
+
+    const filtro =
+      defs
+        .append("filter")
+        .attr(
+          "id",
+          "sombra-mapa"
+        )
+        .attr(
+          "x",
+          "-20%"
+        )
+        .attr(
+          "y",
+          "-20%"
+        )
+        .attr(
+          "width",
+          "140%"
+        )
+        .attr(
+          "height",
+          "140%"
+        );
+
+    filtro
+      .append("feDropShadow")
+      .attr("dx", 0)
+      .attr("dy", 3)
+      .attr(
+        "stdDeviation",
+        4
+      )
+      .attr(
+        "flood-color",
+        "#0f172a"
+      )
+      .attr(
+        "flood-opacity",
+        0.08
+      );
+
+    // ==================================================
+    // ESTADOS
+    // ==================================================
+
     const grupoEstados =
       svg
         .append("g")
         .attr(
           "class",
           "camada-estados"
+        )
+        .attr(
+          "filter",
+          "url(#sombra-mapa)"
         );
 
     grupoEstados
@@ -250,7 +373,7 @@ export default function MapaBrasil({
       )
       .attr(
         "stroke-width",
-        1.4
+        1.5
       )
       .attr(
         "opacity",
@@ -261,25 +384,106 @@ export default function MapaBrasil({
         "pointer"
       )
 
+      // ==================================================
+      // MOUSE ENTER
+      // ==================================================
+
       .on(
         "mouseenter",
-        function () {
-          d3
-            .select(this)
-            .attr(
-              "opacity",
-              0.78
-            )
+        function (
+          event,
+          estado
+        ) {
+          const elemento =
+            d3.select(this);
+
+          elemento
+            .interrupt()
             .attr(
               "stroke",
-              "#111827"
+              "#0f172a"
             )
             .attr(
               "stroke-width",
-              2
+              2.5
+            )
+            .attr(
+              "opacity",
+              0.88
             );
+
+          const container =
+            containerMapaRef.current;
+
+          if (!container) {
+            return;
+          }
+
+          const rect =
+            container.getBoundingClientRect();
+
+          setTooltip({
+            x:
+              event.clientX -
+              rect.left,
+
+            y:
+              event.clientY -
+              rect.top,
+
+            uf:
+              estado.properties
+                .SIGLA_UF,
+
+            nome:
+              estado.properties
+                .NM_UF,
+          });
         }
       )
+
+      // ==================================================
+      // MOUSE MOVE
+      // ==================================================
+
+      .on(
+        "mousemove",
+        function (event) {
+          const container =
+            containerMapaRef.current;
+
+          if (!container) {
+            return;
+          }
+
+          const rect =
+            container.getBoundingClientRect();
+
+          setTooltip(
+            (anterior) => {
+              if (!anterior) {
+                return null;
+              }
+
+              return {
+                ...anterior,
+
+                x:
+                  event.clientX -
+                  rect.left,
+
+                y:
+                  event.clientY -
+                  rect.top,
+              };
+            }
+          );
+        }
+      )
+
+      // ==================================================
+      // MOUSE LEAVE
+      // ==================================================
 
       .on(
         "mouseleave",
@@ -304,17 +508,23 @@ export default function MapaBrasil({
             .attr(
               "stroke",
               selecionado
-                ? "#111827"
+                ? "#0f172a"
                 : "#ffffff"
             )
             .attr(
               "stroke-width",
               selecionado
                 ? 3
-                : 1.4
+                : 1.5
             );
+
+          setTooltip(null);
         }
       )
+
+      // ==================================================
+      // CLICK
+      // ==================================================
 
       .on(
         "click",
@@ -330,7 +540,7 @@ export default function MapaBrasil({
       );
 
     // ==================================================
-    // SIGLAS
+    // SIGLAS DOS ESTADOS
     // ==================================================
 
     const grupoSiglas =
@@ -371,15 +581,15 @@ export default function MapaBrasil({
       )
       .attr(
         "font-size",
-        "12px"
+        "11px"
       )
       .attr(
         "font-weight",
-        "600"
+        "700"
       )
       .attr(
         "fill",
-        "#475569"
+        "#334155"
       )
       .style(
         "pointer-events",
@@ -393,7 +603,7 @@ export default function MapaBrasil({
   }, [geojson]);
 
   // ====================================================
-  // CORES
+  // ATUALIZAR CORES DO MAPA
   // ====================================================
 
   useEffect(() => {
@@ -433,7 +643,7 @@ export default function MapaBrasil({
       )
       .interrupt()
       .transition()
-      .duration(500)
+      .duration(600)
       .attr(
         "fill",
         (estado) => {
@@ -454,7 +664,7 @@ export default function MapaBrasil({
   ]);
 
   // ====================================================
-  // SELEÇÃO
+  // DESTACAR ESTADO SELECIONADO
   // ====================================================
 
   useEffect(() => {
@@ -483,7 +693,7 @@ export default function MapaBrasil({
           estado.properties
             .SIGLA_UF ===
           estadoSelecionado
-            ? "#111827"
+            ? "#0f172a"
             : "#ffffff"
       )
       .attr(
@@ -493,47 +703,154 @@ export default function MapaBrasil({
             .SIGLA_UF ===
           estadoSelecionado
             ? 3
-            : 1.4
+            : 1.5
       );
   }, [
     estadoSelecionado,
   ]);
 
+  // ====================================================
+  // ERRO DO MAPA
+  // ====================================================
+
   if (erroMapa) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">
+      <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
         {erroMapa}
       </div>
     );
   }
 
-  return (
-    <section>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">
-          Resultado por estado
-        </h2>
+  // ====================================================
+  // RENDER
+  // ====================================================
 
-        <p className="mt-1 text-sm text-gray-500">
-          Clique em uma unidade da Federação para visualizar os resultados.
-        </p>
+  return (
+    <div>
+      {/* CABEÇALHO INTERNO */}
+
+      <div className="mb-6 flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">
+            Mapa eleitoral
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Clique em um estado para consultar os resultados.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 15l5 5m-2.5-8.5A6.5 6.5 0 1 1 4.5 11.5a6.5 6.5 0 0 1 13 0Z"
+            />
+          </svg>
+
+          Mapa interativo
+        </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+      {/* MAPA + PAINEL */}
 
+      <div className="grid items-start gap-7 lg:grid-cols-[1.45fr_0.85fr]">
         {/* MAPA */}
 
-        <div>
+        <div
+          ref={containerMapaRef}
+          className="relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/60 px-3 py-4 sm:px-5"
+        >
+          {/* LOADING */}
+
+          {!geojson && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-50">
+              <div className="text-center">
+                <div className="mx-auto h-7 w-7 animate-spin rounded-full border-[3px] border-slate-200 border-t-slate-700" />
+
+                <p className="mt-3 text-sm text-slate-500">
+                  Carregando mapa...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* SVG */}
+
           <svg
             ref={svgRef}
-            className="h-auto w-full"
+            className="mx-auto h-auto w-full max-w-[720px]"
             aria-label="Mapa eleitoral do Brasil"
           />
+
+          {/* TOOLTIP */}
+
+          {tooltip && (
+            <div
+              className="pointer-events-none absolute z-20 min-w-40 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg"
+              style={{
+                left: tooltip.x,
+                top: tooltip.y,
+              }}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold text-slate-400">
+                    {tooltip.uf}
+                  </p>
+
+                  <p className="mt-0.5 text-sm font-bold text-slate-800">
+                    {tooltip.nome}
+                  </p>
+                </div>
+
+                {resultadoTooltip &&
+                  resultadoTooltip.totalizado >
+                    0 && (
+                    <span className="text-xs font-semibold text-slate-500">
+                      {formatarPercentual(
+                        resultadoTooltip.totalizado
+                      )}
+                    </span>
+                  )}
+              </div>
+
+              {resultadoTooltip &&
+              resultadoTooltip.votosValidos >
+                0 &&
+              liderTooltip ? (
+                <div className="mt-2 border-t border-slate-100 pt-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    Liderança
+                  </p>
+
+                  <p className="mt-0.5 text-xs font-semibold text-slate-700">
+                    {liderTooltip.nomeUrna ??
+                      liderTooltip.nome}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-400">
+                  Aguardando totalização
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* LEGENDA */}
 
           <LegendaMapa />
         </div>
 
-        {/* ESTADO */}
+        {/* PAINEL DO ESTADO */}
 
         <PainelEstado
           resultado={
@@ -543,8 +860,7 @@ export default function MapaBrasil({
             carregando
           }
         />
-
       </div>
-    </section>
+    </div>
   );
 }
