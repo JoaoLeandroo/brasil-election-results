@@ -4,6 +4,8 @@ import ControleDados from "@/components/eleicao/ControleDados";
 
 import StatusAtualizacao from "@/components/eleicao/StatusAtualizacao";
 
+import ResultadoNacional from "@/components/eleicao/ResultadoNacional";
+
 import MapaBrasil from "@/components/eleicao/mapa/MapaBrasil";
 
 import useResultadosEleicao from "@/hooks/useResultadosEleicao";
@@ -39,11 +41,12 @@ export default function DashboardEleicao() {
 
 
   return (
+
     <div className="space-y-6">
 
 
       {/* ================================================
-          CONTROLE DE DADOS
+          CONTROLE OFICIAL / SIMULAÇÃO
       ================================================= */}
 
       <ControleDados
@@ -60,7 +63,7 @@ export default function DashboardEleicao() {
 
 
       {/* ================================================
-          ERRO INICIAL
+          ERRO DA CONSULTA ESTADUAL
       ================================================= */}
 
       {erroInicial &&
@@ -70,15 +73,21 @@ export default function DashboardEleicao() {
         <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
 
           <p className="font-semibold text-red-700">
-            Não foi possível carregar os dados oficiais
+
+            Não foi possível carregar os dados estaduais
+
           </p>
 
           <p className="mt-1 text-sm text-red-600">
+
             {erroInicial}
+
           </p>
 
           <p className="mt-2 text-xs text-red-500">
+
             O modo de simulação continua disponível para testes da interface.
+
           </p>
 
         </div>
@@ -87,7 +96,7 @@ export default function DashboardEleicao() {
 
 
       {/* ================================================
-          STATUS
+          STATUS GERAL
       ================================================= */}
 
       <div className="flex justify-end">
@@ -129,7 +138,24 @@ export default function DashboardEleicao() {
 
 
       {/* ================================================
-          MAPA
+          RESULTADO NACIONAL
+      ================================================= */}
+
+      <ResultadoNacional
+        modoDados={
+          modoDados
+        }
+        resultadosEstados={
+          resultadosExibidos
+        }
+        progressoSimulacao={
+          progressoSimulacao
+        }
+      />
+
+
+      {/* ================================================
+          MAPA DO BRASIL
       ================================================= */}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -149,5 +175,6 @@ export default function DashboardEleicao() {
       </div>
 
     </div>
+
   );
 }
