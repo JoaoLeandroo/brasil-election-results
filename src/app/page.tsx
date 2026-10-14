@@ -1,12 +1,11 @@
-import MapaBrasil from "@/components/eleicao/MapaBrasil";
+import DashboardEleicao from "@/components/eleicao/DashboardEleicao";
+
 
 export default function Home() {
-
   return (
-
     <main className="min-h-screen bg-gray-50">
 
-      <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="mx-auto max-w-7xl px-5 py-10">
 
         <header className="mb-10">
 
@@ -25,16 +24,10 @@ export default function Home() {
         </header>
 
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-
-          <MapaBrasil />
-
-        </div>
+        <DashboardEleicao />
 
       </div>
 
     </main>
-
   );
-
 }
